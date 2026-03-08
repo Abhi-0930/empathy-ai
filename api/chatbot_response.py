@@ -94,8 +94,34 @@ def determine_dominant_emotion(text_sentiment, voice_emotion, face_emotion):
 
     return voice_emotion or text_sentiment or face_emotion
 
+
+def _generate_conversational_response(user_id, session_id, user_text, formatted_history):
+    """Normal back-and-forth chat for text-only mode (no emotion-analysis structure)."""
+    system_message = SystemMessage(
+        content=(
+            "You are a warm, supportive **mental health** AI companion. Your role is to support users with their emotional well-being, stress, and mental health—not to answer general knowledge, coding, tech, or other off-topic questions.\n\n"
+            "Reply in a natural, conversational way. Keep responses concise. Use **bold** or markdown only when it helps.\n\n"
+            "**If the user asks about mental health, feelings, stress, or how they're doing:** Respond with empathy and support. Match their tone—brief for brief messages, more depth when they open up. No fixed sections or long templates.\n\n"
+            "**If the user asks about something off-topic (e.g. coding, tech, general knowledge, homework, other topics):** Do not answer the question in full. Briefly acknowledge it in one sentence, then gently redirect. For example: \"I'm here to support you with how you're feeling and your well-being—I'm not the best for tech or coding questions. How have you been feeling lately, or is there something on your mind?\" Keep it kind and short, then invite them to share what's on their mind emotionally or mentally.\n\n"
+            "Stay in character as a mental health companion. Do not provide detailed answers to non–mental-health topics."
+        )
+    )
+    user_message = HumanMessage(content=user_text)
+    messages = formatted_history + [system_message, user_message]
+    ai_response = llm.invoke(messages)
+    store_chat_in_db(
+        user_id,
+        session_id,
+        user_text,
+        ai_response.content,
+        voice_emotion=None,
+        dominant_emotion=None,
+    )
+    return ai_response.content
+
+
 def generate_chatbot_response(user_id, session_id, user_text, face_emotion, voice_emotion, voice_text):
-    """Generate chatbot response based on text sentiment, face emotion and voice tone."""
+    """Generate chatbot response. Text-only = normal conversation; voice/face = emotion-structured response."""
 
     # Fallback: if no session_id provided, group by user_id
     if not session_id:
@@ -110,6 +136,13 @@ def generate_chatbot_response(user_id, session_id, user_text, face_emotion, voic
         formatted_history.append(HumanMessage(content=entry["user_message"]))
         formatted_history.append(SystemMessage(content=entry["ai_response"]))
 
+    # Text-only (no voice, no face) → normal conversational chat
+    if not voice_emotion and not face_emotion:
+        return _generate_conversational_response(
+            user_id, session_id, user_text, formatted_history
+        )
+
+    # Voice and/or face present → emotion-analysis flow with structured response
     sentiment, confidence = analyze_sentiment(user_text)
     dominant_emotion = determine_dominant_emotion(sentiment, voice_emotion, face_emotion)
 

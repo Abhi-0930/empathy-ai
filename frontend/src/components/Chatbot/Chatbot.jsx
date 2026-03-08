@@ -157,7 +157,15 @@ const MentalHealthChatbot = () => {
 
   // Handle sending a message (text mode, via Python unified_emotion for memory)
   const handleSendMessage = async () => {
-    if (!input.trim() || !activeChat || !user) return;
+    if (!input.trim()) return;
+
+    if (!activeChat || !user) {
+      showNotification(
+        "Please create or select a chat session to send messages.",
+        "error"
+      );
+      return;
+    }
 
     setLastInputType("text");
     const textToSend = input;
@@ -880,6 +888,21 @@ const MentalHealthChatbot = () => {
       {/* Main chat area */}
       <div className="main-content">
         <div className="chat-header">
+          <div className="chat-header-left">
+            {activeChat ? (
+              <div className="chat-session-info">
+                <MessageCircle size={20} className="session-icon" />
+                <span className="chat-session-title">
+                  {chats.find((c) => c._id === activeChat)?.title || "Chat"}
+                </span>
+              </div>
+            ) : (
+              <div className="chat-no-session-label">
+                <MessageCircle size={20} />
+                <span>Select a conversation or start a new one</span>
+              </div>
+            )}
+          </div>
           <div className="profile-container">
             <div className="emergency-button">
               <AlertTriangle size={20} />
@@ -927,7 +950,23 @@ const MentalHealthChatbot = () => {
         </div>
 
         <div className="messages-container">
-          {messages.map((message) => (
+          {!activeChat ? (
+            <div className="chat-empty-state">
+              <div className="chat-empty-icon">
+                <MessageCircle size={48} strokeWidth={1.5} />
+              </div>
+              <h3 className="chat-empty-title">No conversation selected</h3>
+              <p className="chat-empty-text">
+                Choose a chat from the sidebar or start a new conversation to begin.
+              </p>
+              <button className="chat-empty-cta" onClick={handleNewChat}>
+                <Plus size={20} />
+                <span>New Chat</span>
+              </button>
+            </div>
+          ) : (
+            <>
+              {messages.map((message) => (
             <div
               key={message.id}
               className={`message ${
@@ -971,6 +1010,8 @@ const MentalHealthChatbot = () => {
             </div>
           )}
           <div ref={messagesEndRef} />
+            </>
+          )}
         </div>
 
         <div className="input-container">
@@ -979,6 +1020,17 @@ const MentalHealthChatbot = () => {
               {notification.message}
             </div>
           )}
+          {!activeChat ? (
+            <div className="input-container-no-session">
+              <MessageCircle size={20} />
+              <span>Select a chat from the sidebar or create a new one to start</span>
+              <button className="chat-empty-cta inline" onClick={handleNewChat}>
+                <Plus size={18} />
+                <span>New Chat</span>
+              </button>
+            </div>
+          ) : (
+            <>
           <div className="input-mode-selector">
             <button
               className={`input-mode-btn ${
@@ -987,6 +1039,7 @@ const MentalHealthChatbot = () => {
               onClick={() => setInputMode("text")}
             >
               <MessageCircle size={20} />
+              <span>Text</span>
             </button>
             <button
               className={`input-mode-btn ${
@@ -995,6 +1048,7 @@ const MentalHealthChatbot = () => {
               onClick={() => setInputMode("video")}
             >
               <Video size={20} />
+              <span>Video</span>
             </button>
             <button
               className={`input-mode-btn ${
@@ -1003,6 +1057,7 @@ const MentalHealthChatbot = () => {
               onClick={() => setInputMode("voice")}
             >
               <Mic size={20} />
+              <span>Voice</span>
             </button>
           </div>
 
@@ -1110,7 +1165,12 @@ const MentalHealthChatbot = () => {
                 placeholder="Type a message..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
                 ref={textInputRef}
               />
               <button
@@ -1121,6 +1181,8 @@ const MentalHealthChatbot = () => {
                 <Send size={20} />
               </button>
             </div>
+          )}
+            </>
           )}
         </div>
       </div>
