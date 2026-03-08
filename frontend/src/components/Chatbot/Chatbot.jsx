@@ -20,6 +20,8 @@ import {
   Camera,
   Share2,
   MoreVertical,
+  Copy,
+  Check,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -51,6 +53,11 @@ const MentalHealthChatbot = () => {
   const [notification, setNotification] = useState(null); // { type: 'info' | 'error', message: string }
   const [isBotTyping, setIsBotTyping] = useState(false);
   const [openChatMenuId, setOpenChatMenuId] = useState(null);
+  const [renameModal, setRenameModal] = useState({ open: false, chatId: null, currentTitle: "" });
+  const [renameInput, setRenameInput] = useState("");
+  const [deleteModal, setDeleteModal] = useState({ open: false, chatId: null });
+  const [shareModal, setShareModal] = useState({ open: false, chatId: null, url: null });
+  const [copiedShare, setCopiedShare] = useState(false);
 
   const getNextMessageId = () => {
     messageIdRef.current += 1;
@@ -239,26 +246,6 @@ const MentalHealthChatbot = () => {
     }
   };
 
-  // Handle deleting a chat
-  const handleDeleteChat = async (chatId) => {
-    const token = localStorage.getItem("token");
-    const response = await fetch(`/api/chats/${chatId}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (response.ok) {
-      const updatedChats = chats.filter((chat) => chat._id !== chatId);
-      setChats(updatedChats);
-      if (activeChat === chatId) {
-        setActiveChat(null);
-        setMessages([]);
-      }
-    } else {
-      console.error("Failed to delete chat");
-    }
-  };
-
   // Load history when changing active chat
   useEffect(() => {
     const loadHistory = async () => {
@@ -344,17 +331,36 @@ const MentalHealthChatbot = () => {
         return;
       }
       const data = await res.json();
-      window.prompt("Shareable link:", data.url);
+      setShareModal({ open: true, chatId, url: data.url });
+      setCopiedShare(false);
     } catch (error) {
       console.error("Error creating share link:", error);
     }
   };
 
-  // Rename chat
-  const handleRenameChat = async (chatId) => {
-    const newTitle = window.prompt("New chat title:");
-    if (!newTitle || !newTitle.trim()) return;
+  const copyShareLink = () => {
+    if (shareModal.url) {
+      navigator.clipboard.writeText(shareModal.url);
+      setCopiedShare(true);
+      setTimeout(() => setCopiedShare(false), 2000);
+    }
+  };
 
+  const openRenameModal = (chatId) => {
+    const chat = chats.find((c) => c._id === chatId);
+    if (chat) {
+      setRenameModal({ open: true, chatId, currentTitle: chat.title });
+      setRenameInput(chat.title);
+    }
+  };
+
+  const submitRename = async () => {
+    const { chatId } = renameModal;
+    const newTitle = renameInput.trim();
+    if (!chatId || !newTitle) {
+      setRenameModal({ open: false, chatId: null, currentTitle: "" });
+      return;
+    }
     const token = localStorage.getItem("token");
     try {
       const res = await fetch(`/api/chats/${chatId}`, {
@@ -363,7 +369,7 @@ const MentalHealthChatbot = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ title: newTitle.trim() }),
+        body: JSON.stringify({ title: newTitle }),
       });
       if (!res.ok) {
         console.error("Failed to rename chat");
@@ -376,6 +382,36 @@ const MentalHealthChatbot = () => {
     } catch (error) {
       console.error("Error renaming chat:", error);
     }
+    setRenameModal({ open: false, chatId: null, currentTitle: "" });
+    setRenameInput("");
+  };
+
+  const openDeleteModal = (chatId) => {
+    setDeleteModal({ open: true, chatId });
+  };
+
+  const confirmDelete = async () => {
+    const { chatId } = deleteModal;
+    if (!chatId) {
+      setDeleteModal({ open: false, chatId: null });
+      return;
+    }
+    const token = localStorage.getItem("token");
+    const response = await fetch(`/api/chats/${chatId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.ok) {
+      const updatedChats = chats.filter((chat) => chat._id !== chatId);
+      setChats(updatedChats);
+      if (activeChat === chatId) {
+        setActiveChat(null);
+        setMessages([]);
+      }
+    } else {
+      console.error("Failed to delete chat");
+    }
+    setDeleteModal({ open: false, chatId: null });
   };
 
   // Video and audio functionality
@@ -725,13 +761,25 @@ const MentalHealthChatbot = () => {
   return (
     <div className={`app-container ${darkMode ? "dark" : "light"}`}>
       {/* Mobile menu toggle */}
-      <div className="mobile-menu-toggle">
+      <button
+        type="button"
+        className="mobile-menu-toggle"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+      >
         {isMobileMenuOpen ? (
-          <X size={24} onClick={() => setIsMobileMenuOpen(false)} />
+          <X size={22} strokeWidth={2} />
         ) : (
-          <Menu size={24} onClick={() => setIsMobileMenuOpen(true)} />
+          <Menu size={22} strokeWidth={2} />
         )}
-      </div>
+      </button>
+
+      {/* Backdrop: tap outside to close sidebar on mobile */}
+      <div
+        className={`sidebar-backdrop ${isMobileMenuOpen ? "visible" : ""}`}
+        onClick={() => setIsMobileMenuOpen(false)}
+        aria-hidden="true"
+      />
 
       {/* Left sidebar */}
       <div className={`sidebar ${isMobileMenuOpen ? "open" : ""}`}>
@@ -792,7 +840,7 @@ const MentalHealthChatbot = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           setOpenChatMenuId(null);
-                          handleRenameChat(chat._id);
+                          openRenameModal(chat._id);
                         }}
                       >
                         <Edit size={14} />
@@ -814,7 +862,7 @@ const MentalHealthChatbot = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           setOpenChatMenuId(null);
-                          handleDeleteChat(chat._id);
+                          openDeleteModal(chat._id);
                         }}
                       >
                         <Trash2 size={14} />
@@ -832,9 +880,6 @@ const MentalHealthChatbot = () => {
       {/* Main chat area */}
       <div className="main-content">
         <div className="chat-header">
-          <div className="chat-info">
-            <h3>Session {activeChat}</h3>
-          </div>
           <div className="profile-container">
             <div className="emergency-button">
               <AlertTriangle size={20} />
@@ -1079,6 +1124,59 @@ const MentalHealthChatbot = () => {
           )}
         </div>
       </div>
+
+      {/* Rename modal */}
+      {renameModal.open && (
+        <div className="modal-overlay" onClick={() => setRenameModal({ open: false, chatId: null, currentTitle: "" })}>
+          <div className="modal-content rename-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Rename chat</h3>
+            <input
+              type="text"
+              className="modal-input"
+              value={renameInput}
+              onChange={(e) => setRenameInput(e.target.value)}
+              placeholder="Chat title"
+              autoFocus
+            />
+            <div className="modal-actions">
+              <button className="modal-btn secondary" onClick={() => setRenameModal({ open: false, chatId: null, currentTitle: "" })}>Cancel</button>
+              <button className="modal-btn primary" onClick={submitRename}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteModal.open && (
+        <div className="modal-overlay" onClick={() => setDeleteModal({ open: false, chatId: null })}>
+          <div className="modal-content delete-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Delete chat?</h3>
+            <p className="modal-text">This conversation will be permanently deleted. This cannot be undone.</p>
+            <div className="modal-actions">
+              <button className="modal-btn secondary" onClick={() => setDeleteModal({ open: false, chatId: null })}>Cancel</button>
+              <button className="modal-btn destructive" onClick={confirmDelete}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share modal */}
+      {shareModal.open && shareModal.url && (
+        <div className="modal-overlay" onClick={() => setShareModal({ open: false, chatId: null, url: null })}>
+          <div className="modal-content share-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Share chat</h3>
+            <p className="modal-text">Anyone with this link can view the conversation.</p>
+            <div className="share-link-row">
+              <input type="text" className="modal-input share-link-input" readOnly value={shareModal.url} />
+              <button type="button" className="modal-btn primary copy-btn" onClick={copyShareLink}>
+                {copiedShare ? <Check size={16} /> : <Copy size={16} />}
+                <span>{copiedShare ? "Copied" : "Copy"}</span>
+              </button>
+            </div>
+            <button className="modal-btn secondary full-width" onClick={() => setShareModal({ open: false, chatId: null, url: null })}>Done</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
