@@ -399,6 +399,70 @@
   align-self: flex-end;
 }
 
+.typing-container {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+.typing-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background-color: var(--bg-secondary);
+}
+
+.typing-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.typing-line {
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.3),
+    rgba(148, 163, 184, 0.7),
+    rgba(148, 163, 184, 0.3)
+  );
+  transform-origin: left;
+  animation: typingPulse 1.2s ease-in-out infinite;
+}
+
+.typing-line.line2 {
+  animation-delay: 0.12s;
+}
+
+.typing-line.line3 {
+  animation-delay: 0.24s;
+}
+
+@keyframes typingPulse {
+  0% {
+    transform: scaleX(0.3);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(0.4);
+    opacity: 0.7;
+  }
+}
+
 /* Input area */
 .input-container {
   padding: 1rem 1.5rem;

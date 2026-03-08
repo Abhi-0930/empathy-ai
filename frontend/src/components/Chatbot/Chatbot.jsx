@@ -48,6 +48,7 @@ const MentalHealthChatbot = () => {
   const [videoPhase, setVideoPhase] = useState("idle"); // "idle" | "starting" | "recording" | "ending"
   const [videoCountdown, setVideoCountdown] = useState(null);
   const [notification, setNotification] = useState(null); // { type: 'info' | 'error', message: string }
+  const [isBotTyping, setIsBotTyping] = useState(false);
 
   const getNextMessageId = () => {
     messageIdRef.current += 1;
@@ -141,6 +142,7 @@ const MentalHealthChatbot = () => {
     setMessages((prev) => [...prev, userMessage]);
 
     try {
+      setIsBotTyping(true);
       const formData = new FormData();
       formData.append("user_id", user._id);
       formData.append("session_id", activeChat);
@@ -180,6 +182,8 @@ const MentalHealthChatbot = () => {
       );
     } catch (error) {
       console.error("Error sending text message:", error);
+    } finally {
+      setIsBotTyping(false);
     }
   };
 
@@ -377,6 +381,7 @@ const MentalHealthChatbot = () => {
 
         try {
           setLastInputType("video");
+          setIsBotTyping(true);
           const res = await axios.post(
             "http://127.0.0.1:5000/unified_emotion",
             formData,
@@ -396,6 +401,8 @@ const MentalHealthChatbot = () => {
           setMessages((prev) => [...prev, botResponse]);
         } catch (error) {
           console.error("Error sending frame:", error);
+        } finally {
+          setIsBotTyping(false);
         }
       },
       "image/jpeg"
@@ -454,9 +461,7 @@ const MentalHealthChatbot = () => {
         setVideoCountdown(null);
         setIsStreaming(true);
         setVideoPhase("recording");
-
-        const interval = setInterval(captureAndSendFrame, 3000);
-        setStreamInterval(interval);
+        setStreamInterval(null);
 
         // Automatically stop after a fixed duration with an ending countdown (similar to voice)
         const recordingDurationSeconds = 10;
@@ -473,8 +478,7 @@ const MentalHealthChatbot = () => {
             secondsLeft -= 1;
             if (secondsLeft <= 0) {
               clearInterval(countdownTimer);
-              clearInterval(interval);
-              setStreamInterval(null);
+              captureAndSendFrame();
               setIsStreaming(false);
               setVideoPhase("idle");
               setVideoCountdown(null);
@@ -581,6 +585,7 @@ const MentalHealthChatbot = () => {
 
         try {
           setLastInputType("voice");
+          setIsBotTyping(true);
           const res = await axios.post(
             "http://127.0.0.1:5000/unified_emotion",
             formData,
@@ -600,6 +605,8 @@ const MentalHealthChatbot = () => {
           setMessages((prev) => [...prev, botResponse]);
         } catch (error) {
           console.error("Error sending voice:", error);
+        } finally {
+          setIsBotTyping(false);
         }
         
         // Close audio stream and audio context
@@ -865,6 +872,18 @@ const MentalHealthChatbot = () => {
               </div>
             ));
           })()}
+          {isBotTyping && (
+            <div className="typing-container">
+              <div className="typing-icon">
+                <span>AI</span>
+              </div>
+              <div className="typing-lines">
+                <div className="typing-line line1" />
+                <div className="typing-line line2" />
+                <div className="typing-line line3" />
+              </div>
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
 
