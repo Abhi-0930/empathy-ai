@@ -836,42 +836,37 @@ const MentalHealthChatbot = () => {
         </div>
 
         <div className="messages-container">
-          {(() => {
-            const lastUser = [...messages].reverse().find((m) => m.sender === "user");
-            const lastBot = [...messages].reverse().find((m) => m.sender === "bot");
-            const toShow = [lastUser, lastBot].filter(Boolean);
-            return toShow.map((message) => (
-              <div
-                key={message.id}
-                className={`message ${
-                  message.sender === "user" ? "user-message" : "bot-message"
-                }`}
-              >
-                <div className="message-content">
-                  {message.sender === "bot" ? (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {message.text}
-                    </ReactMarkdown>
-                  ) : message.mode === "video" ? (
-                    <div className="message-media-label">
-                      <Camera size={16} />
-                      <span>Video emotion analysis</span>
-                    </div>
-                  ) : message.mode === "voice" ? (
-                    <div className="message-media-label">
-                      <Mic size={16} />
-                      <span>Voice emotion analysis</span>
-                    </div>
-                  ) : (
-                    <p>{message.text}</p>
-                  )}
-                </div>
-                <div className="message-time">
-                  {formatTime(message.timestamp)}
-                </div>
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`message ${
+                message.sender === "user" ? "user-message" : "bot-message"
+              }`}
+            >
+              <div className="message-content">
+                {message.sender === "bot" ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {message.text}
+                  </ReactMarkdown>
+                ) : message.mode === "video" ? (
+                  <div className="message-media-label">
+                    <Camera size={16} />
+                    <span>Video emotion analysis</span>
+                  </div>
+                ) : message.mode === "voice" ? (
+                  <div className="message-media-label">
+                    <Mic size={16} />
+                    <span>Voice emotion analysis</span>
+                  </div>
+                ) : (
+                  <p>{message.text}</p>
+                )}
               </div>
-            ));
-          })()}
+              <div className="message-time">
+                {formatTime(message.timestamp)}
+              </div>
+            </div>
+          ))}
           {isBotTyping && (
             <div className="typing-container">
               <div className="typing-icon">
