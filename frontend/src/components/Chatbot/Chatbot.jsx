@@ -400,6 +400,14 @@ const MentalHealthChatbot = () => {
   };
 
   const startStreaming = () => {
+    if (!user || !activeChat) {
+      showNotification(
+        "Please create or select a chat session before starting Live Video Analysis.",
+        "error"
+      );
+      return;
+    }
+
     if (!isStreaming) {
       // Show a one-time user bubble indicating video analysis
       setMessages((prev) => [
