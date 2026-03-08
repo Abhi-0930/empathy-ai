@@ -45,6 +45,7 @@ const MentalHealthChatbot = () => {
   const [lastInputType, setLastInputType] = useState("text"); // "text" | "video" | "voice"
   const [voicePhase, setVoicePhase] = useState("idle"); // "idle" | "starting" | "recording" | "ending"
   const [voiceLevel, setVoiceLevel] = useState(0); // 0–1 audio intensity
+  const [notification, setNotification] = useState(null); // { type: 'info' | 'error', message: string }
 
   const getNextMessageId = () => {
     messageIdRef.current += 1;
@@ -63,6 +64,15 @@ const MentalHealthChatbot = () => {
   const analyserRef = useRef(null);
   const dataArrayRef = useRef(null);
   const levelAnimationRef = useRef(null);
+
+  const showNotification = (message, type = "info", durationMs = 4000) => {
+    setNotification({ message, type });
+    if (durationMs > 0) {
+      setTimeout(() => {
+        setNotification(null);
+      }, durationMs);
+    }
+  };
 
   // Fetch user profile and chats on component mount
   useEffect(() => {
@@ -416,8 +426,9 @@ const MentalHealthChatbot = () => {
 
   const handleStartRecording = () => {
     if (!user || !activeChat) {
-      alert(
-        "Please create or select a chat session before using Voice Analysis."
+      showNotification(
+        "Please create or select a chat session before using Voice Analysis.",
+        "error"
       );
       return;
     }
@@ -792,6 +803,11 @@ const MentalHealthChatbot = () => {
         </div>
 
         <div className="input-container">
+          {notification && (
+            <div className={`notification-bar ${notification.type}`}>
+              {notification.message}
+            </div>
+          )}
           <div className="input-mode-selector">
             <button
               className={`input-mode-btn ${
