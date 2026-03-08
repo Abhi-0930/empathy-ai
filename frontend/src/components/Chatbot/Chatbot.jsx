@@ -45,7 +45,7 @@ const MentalHealthChatbot = () => {
   const [lastInputType, setLastInputType] = useState("text"); // "text" | "video" | "voice"
   const [voicePhase, setVoicePhase] = useState("idle"); // "idle" | "starting" | "recording" | "ending"
   const [voiceLevel, setVoiceLevel] = useState(0); // 0–1 audio intensity
-  const [videoPhase, setVideoPhase] = useState("idle"); // "idle" | "starting" | "recording"
+  const [videoPhase, setVideoPhase] = useState("idle"); // "idle" | "starting" | "recording" | "ending"
   const [videoCountdown, setVideoCountdown] = useState(null);
   const [notification, setNotification] = useState(null); // { type: 'info' | 'error', message: string }
 
@@ -458,15 +458,32 @@ const MentalHealthChatbot = () => {
         const interval = setInterval(captureAndSendFrame, 3000);
         setStreamInterval(interval);
 
-        // Automatically stop after a fixed duration (similar to voice)
-        const recordingDurationMs = 10000; // 10 seconds
+        // Automatically stop after a fixed duration with an ending countdown (similar to voice)
+        const recordingDurationSeconds = 10;
+        const endingCountdownSeconds = 3;
+        const endingStartMs =
+          (recordingDurationSeconds - endingCountdownSeconds) * 1000;
+
         videoTimeoutRef.current = setTimeout(() => {
-          clearInterval(interval);
-          setStreamInterval(null);
-          setIsStreaming(false);
-          setVideoPhase("idle");
-          setVideoCountdown(null);
-        }, recordingDurationMs);
+          setVideoPhase("ending");
+          let secondsLeft = endingCountdownSeconds;
+          setVideoCountdown(secondsLeft);
+
+          const countdownTimer = setInterval(() => {
+            secondsLeft -= 1;
+            if (secondsLeft <= 0) {
+              clearInterval(countdownTimer);
+              clearInterval(interval);
+              setStreamInterval(null);
+              setIsStreaming(false);
+              setVideoPhase("idle");
+              setVideoCountdown(null);
+              videoTimeoutRef.current = null;
+            } else {
+              setVideoCountdown(secondsLeft);
+            }
+          }, 1000);
+        }, endingStartMs);
       } else {
         setVideoCountdown(secondsLeft);
       }
@@ -900,6 +917,8 @@ const MentalHealthChatbot = () => {
                 <span>
                   {videoPhase === "starting" && videoCountdown !== null
                     ? `Starting in ${videoCountdown}...`
+                    : videoPhase === "ending" && videoCountdown !== null
+                    ? `Ending in ${videoCountdown}...`
                     : "Live Analysis"}
                 </span>
               </div>
