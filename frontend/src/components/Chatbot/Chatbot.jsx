@@ -896,12 +896,7 @@ const MentalHealthChatbot = () => {
                   {chats.find((c) => c._id === activeChat)?.title || "Chat"}
                 </span>
               </div>
-            ) : (
-              <div className="chat-no-session-label">
-                <MessageCircle size={20} />
-                <span>Select a conversation or start a new one</span>
-              </div>
-            )}
+            ) : null}
           </div>
           <div className="profile-container">
             <div className="emergency-button">
@@ -1020,16 +1015,7 @@ const MentalHealthChatbot = () => {
               {notification.message}
             </div>
           )}
-          {!activeChat ? (
-            <div className="input-container-no-session">
-              <MessageCircle size={20} />
-              <span>Select a chat from the sidebar or create a new one to start</span>
-              <button className="chat-empty-cta inline" onClick={handleNewChat}>
-                <Plus size={18} />
-                <span>New Chat</span>
-              </button>
-            </div>
-          ) : (
+          {activeChat ? (
             <>
           <div className="input-mode-selector">
             <button
@@ -1183,7 +1169,7 @@ const MentalHealthChatbot = () => {
             </div>
           )}
             </>
-          )}
+          ) : null}
         </div>
       </div>
 
