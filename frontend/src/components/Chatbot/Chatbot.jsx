@@ -45,6 +45,8 @@ const MentalHealthChatbot = () => {
   const [lastInputType, setLastInputType] = useState("text"); // "text" | "video" | "voice"
   const [voicePhase, setVoicePhase] = useState("idle"); // "idle" | "starting" | "recording" | "ending"
   const [voiceLevel, setVoiceLevel] = useState(0); // 0–1 audio intensity
+  const [videoPhase, setVideoPhase] = useState("idle"); // "idle" | "starting" | "recording"
+  const [videoCountdown, setVideoCountdown] = useState(null);
   const [notification, setNotification] = useState(null); // { type: 'info' | 'error', message: string }
 
   const getNextMessageId = () => {
@@ -64,6 +66,7 @@ const MentalHealthChatbot = () => {
   const analyserRef = useRef(null);
   const dataArrayRef = useRef(null);
   const levelAnimationRef = useRef(null);
+  const videoTimeoutRef = useRef(null);
 
   const showNotification = (message, type = "info", durationMs = 4000) => {
     setNotification({ message, type });
@@ -408,28 +411,66 @@ const MentalHealthChatbot = () => {
       return;
     }
 
-    if (!isStreaming) {
-      // Show a one-time user bubble indicating video analysis
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: getNextMessageId(),
-          text: "",
-          sender: "user",
-          mode: "video",
-          timestamp: new Date(),
-        },
-      ]);
-      setIsStreaming(true);
-      const interval = setInterval(captureAndSendFrame, 3000);
-      setStreamInterval(interval);
-    } else {
+    // If already streaming, act as a manual stop
+    if (isStreaming) {
       if (streamInterval) {
         clearInterval(streamInterval);
         setStreamInterval(null);
       }
+      if (videoTimeoutRef.current) {
+        clearTimeout(videoTimeoutRef.current);
+        videoTimeoutRef.current = null;
+      }
       setIsStreaming(false);
+      setVideoPhase("idle");
+      setVideoCountdown(null);
+      return;
     }
+
+    // Avoid double-start during starting phase
+    if (videoPhase !== "idle") return;
+
+    setVideoPhase("starting");
+    let secondsLeft = 3;
+    setVideoCountdown(secondsLeft);
+
+    const prepTimer = setInterval(() => {
+      secondsLeft -= 1;
+      if (secondsLeft <= 0) {
+        clearInterval(prepTimer);
+
+        // Add a user bubble indicating video analysis
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: getNextMessageId(),
+            text: "",
+            sender: "user",
+            mode: "video",
+            timestamp: new Date(),
+          },
+        ]);
+
+        setVideoCountdown(null);
+        setIsStreaming(true);
+        setVideoPhase("recording");
+
+        const interval = setInterval(captureAndSendFrame, 3000);
+        setStreamInterval(interval);
+
+        // Automatically stop after a fixed duration (similar to voice)
+        const recordingDurationMs = 10000; // 10 seconds
+        videoTimeoutRef.current = setTimeout(() => {
+          clearInterval(interval);
+          setStreamInterval(null);
+          setIsStreaming(false);
+          setVideoPhase("idle");
+          setVideoCountdown(null);
+        }, recordingDurationMs);
+      } else {
+        setVideoCountdown(secondsLeft);
+      }
+    }, 1000);
   };
 
   const handleStartRecording = () => {
@@ -851,10 +892,16 @@ const MentalHealthChatbot = () => {
             >
               <div
                 className="video-status"
-                style={{ display: isStreaming ? "flex" : "none" }}
+                style={{
+                  display: videoPhase !== "idle" ? "flex" : "none",
+                }}
               >
                 <div className="status-dot"></div>
-                <span>Live Analysis</span>
+                <span>
+                  {videoPhase === "starting" && videoCountdown !== null
+                    ? `Starting in ${videoCountdown}...`
+                    : "Live Analysis"}
+                </span>
               </div>
 
               <video
