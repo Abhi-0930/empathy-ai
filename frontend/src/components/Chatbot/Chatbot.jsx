@@ -19,6 +19,7 @@ import {
   Trash2,
   Camera,
   Share2,
+  MoreVertical,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -49,6 +50,7 @@ const MentalHealthChatbot = () => {
   const [videoCountdown, setVideoCountdown] = useState(null);
   const [notification, setNotification] = useState(null); // { type: 'info' | 'error', message: string }
   const [isBotTyping, setIsBotTyping] = useState(false);
+  const [openChatMenuId, setOpenChatMenuId] = useState(null);
 
   const getNextMessageId = () => {
     messageIdRef.current += 1;
@@ -747,37 +749,56 @@ const MentalHealthChatbot = () => {
                 <div className="chat-time">
                   {formatDate(new Date(chat.updatedAt || chat.createdAt))}
                 </div>
-                <div className="chat-actions">
+                <div className="chat-actions-menu">
                   <button
-                    className="icon-button"
+                    className="icon-button chat-actions-trigger"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleRenameChat(chat._id);
+                      setOpenChatMenuId(
+                        openChatMenuId === chat._id ? null : chat._id
+                      );
                     }}
-                    title="Rename chat"
+                    title="More actions"
                   >
-                    <Edit size={14} />
+                    <MoreVertical size={16} />
                   </button>
-                  <button
-                    className="icon-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleShareChat(chat._id);
-                    }}
-                    title="Share chat"
-                  >
-                    <Share2 size={14} />
-                  </button>
-                  <button
-                    className="icon-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteChat(chat._id);
-                    }}
-                    title="Delete chat"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {openChatMenuId === chat._id && (
+                    <div className="chat-actions-dropdown">
+                      <button
+                        className="chat-actions-item"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenChatMenuId(null);
+                          handleRenameChat(chat._id);
+                        }}
+                      >
+                        <Edit size={14} />
+                        <span>Rename</span>
+                      </button>
+                      <button
+                        className="chat-actions-item"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenChatMenuId(null);
+                          handleShareChat(chat._id);
+                        }}
+                      >
+                        <Share2 size={14} />
+                        <span>Share</span>
+                      </button>
+                      <button
+                        className="chat-actions-item destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenChatMenuId(null);
+                          handleDeleteChat(chat._id);
+                        }}
+                      >
+                        <Trash2 size={14} />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
