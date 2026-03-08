@@ -70,6 +70,7 @@ const MentalHealthChatbot = () => {
   const dataArrayRef = useRef(null);
   const levelAnimationRef = useRef(null);
   const videoTimeoutRef = useRef(null);
+  const profileRef = useRef(null);
 
   const showNotification = (message, type = "info", durationMs = 4000) => {
     setNotification({ message, type });
@@ -114,6 +115,28 @@ const MentalHealthChatbot = () => {
 
     fetchUserAndChats();
   }, [navigate]);
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target)
+      ) {
+        setShowProfileDropdown(false);
+      }
+    };
+
+    if (showProfileDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showProfileDropdown]);
 
   // Auto scroll to bottom of messages
   useEffect(() => {
@@ -817,42 +840,44 @@ const MentalHealthChatbot = () => {
               <AlertTriangle size={20} />
               <span>Emergency</span>
             </div>
-            <div
-              className="profile-icon"
-              onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-            >
-              <User size={24} />
-            </div>
-            {showProfileDropdown && (
-              <div className="profile-dropdown">
-                <div className="dropdown-item">
-                  <Edit size={16} />
-                  <span>Edit Profile</span>
-                </div>
-                <div className="dropdown-item">
-                  <Settings size={16} />
-                  <span>Settings</span>
-                </div>
-                <div
-                  className="dropdown-item"
-                  onClick={() => setDarkMode(!darkMode)}
-                >
-                  {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-                  <span>{darkMode ? "Light Mode" : "Dark Mode"}</span>
-                </div>
-                <div className="dropdown-item">
-                  <LogOut size={16} />
-                  <span
-                    onClick={() => {
-                      localStorage.removeItem("token");
-                      navigate("/");
-                    }}
-                  >
-                    Logout
-                  </span>
-                </div>
+            <div className="profile-wrapper" ref={profileRef}>
+              <div
+                className="profile-icon"
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+              >
+                <User size={24} />
               </div>
-            )}
+              {showProfileDropdown && (
+                <div className="profile-dropdown">
+                  <div className="dropdown-item">
+                    <Edit size={16} />
+                    <span>Edit Profile</span>
+                  </div>
+                  <div className="dropdown-item">
+                    <Settings size={16} />
+                    <span>Settings</span>
+                  </div>
+                  <div
+                    className="dropdown-item"
+                    onClick={() => setDarkMode(!darkMode)}
+                  >
+                    {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+                    <span>{darkMode ? "Light Mode" : "Dark Mode"}</span>
+                  </div>
+                  <div className="dropdown-item">
+                    <LogOut size={16} />
+                    <span
+                      onClick={() => {
+                        localStorage.removeItem("token");
+                        navigate("/");
+                      }}
+                    >
+                      Logout
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

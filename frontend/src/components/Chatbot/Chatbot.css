@@ -260,6 +260,10 @@
   gap: 1rem;
 }
 
+.profile-wrapper {
+  position: relative;
+}
+
 .emergency-button {
   display: flex;
   align-items: center;
