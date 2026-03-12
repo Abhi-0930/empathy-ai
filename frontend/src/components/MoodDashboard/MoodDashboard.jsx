@@ -214,6 +214,14 @@ const MoodDashboard = () => {
                       );
                     })}
                   </div>
+                  <div className="mood-legend">
+                    {Object.keys(totals).map((emotion) => (
+                      <span key={emotion} className="mood-legend-item">
+                        <span className={`mood-dot mood-${emotion}`} />
+                        <span>{emotion}</span>
+                      </span>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="mood-card">
