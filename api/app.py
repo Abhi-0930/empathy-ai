@@ -77,7 +77,12 @@ def unified_emotion():
         voice_path = os.path.join(app.config["UPLOAD_FOLDER"], voice_file.filename)
         voice_file.save(voice_path)
         voice_emotion = analyze_voice_emotion(voice_path)
-        voice_text = transcribe_voice(voice_path)
+        try:
+            voice_text = transcribe_voice(voice_path)
+        except Exception as e:
+            # Do not surface low-level transcription errors as user text;
+            # fall back to text-only / voice-emotion-only handling.
+            voice_text = None
 
     if not user_text and voice_text:
         user_text = voice_text

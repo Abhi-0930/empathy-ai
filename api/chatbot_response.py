@@ -171,13 +171,21 @@ def _generate_conversational_response(user_id, session_id, user_text, formatted_
     user_message = HumanMessage(content=user_text)
     messages = formatted_history + [system_message, user_message]
     ai_response = llm.invoke(messages)
+
+    # For text-only conversations, still compute a text sentiment label
+    # so that mood trends can track these entries as well.
+    try:
+        text_sentiment, _ = analyze_sentiment(user_text)
+    except Exception:
+        text_sentiment = None
+
     store_chat_in_db(
         user_id,
         session_id,
         user_text,
         ai_response.content,
         voice_emotion=None,
-        dominant_emotion=None,
+        dominant_emotion=text_sentiment,
     )
     return ai_response.content
 
