@@ -200,10 +200,9 @@ const MoodDashboard = () => {
                           <div className="mood-timeline-bar-wrapper">
                             <div
                               className={`mood-timeline-bar mood-${emotion}`}
-                              style={{ height: `${Math.max(
-                                8,
-                                heightPct
-                              )}%` }}
+                              style={{
+                                height: `${Math.max(30, heightPct)}%`,
+                              }}
                               title={`${bucket.date} – ${emotion} (${totalForDay} entries)`}
                             />
                           </div>
