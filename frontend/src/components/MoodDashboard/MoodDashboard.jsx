@@ -221,6 +221,29 @@ const MoodDashboard = () => {
                       </span>
                     ))}
                   </div>
+                  <table className="mood-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Dominant emotion</th>
+                        <th>Entries</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {buckets.map((bucket) => {
+                        const totalForDay = Object.values(
+                          bucket.counts || {}
+                        ).reduce((s, v) => s + v, 0);
+                        return (
+                          <tr key={bucket.date}>
+                            <td>{bucket.date}</td>
+                            <td>{bucket.dominant_emotion || "—"}</td>
+                            <td>{totalForDay}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
 
                 <div className="mood-card">

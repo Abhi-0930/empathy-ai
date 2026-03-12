@@ -335,6 +335,29 @@
   gap: 0.35rem;
 }
 
+.mood-table {
+  width: 100%;
+  margin-top: 0.75rem;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.mood-table th,
+.mood-table td {
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+}
+
+.mood-table thead th {
+  border-bottom: 1px solid rgba(226, 232, 240, 1);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.mood-table tbody tr:nth-child(odd) {
+  background-color: rgba(248, 250, 252, 0.9);
+}
+
 .mood-dot.mood-calm {
   background: #22c55e;
 }

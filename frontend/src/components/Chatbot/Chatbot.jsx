@@ -273,13 +273,36 @@ const MentalHealthChatbot = () => {
         const flattened = [];
         history.forEach((entry) => {
           const ts = entry.timestamp ? new Date(entry.timestamp) : new Date();
+
+          // Infer the user bubble mode for history:
+          // - If user_message is empty and voice_emotion exists → voice analysis bubble.
+          // - If user_message is empty and no voice_emotion → video analysis bubble.
+          // - If user_message contains an old transcription error string → treat as voice analysis.
+          let userMode = "text";
+          let userText = entry.user_message || "";
+
+          if (!userText) {
+            if (entry.voice_emotion) {
+              userMode = "voice";
+            } else {
+              userMode = "video";
+            }
+          } else if (
+            typeof userText === "string" &&
+            userText.toLowerCase().startsWith("error in transcription")
+          ) {
+            userMode = "voice";
+            userText = "";
+          }
+
           flattened.push({
             id: getNextMessageId(),
-            text: entry.user_message,
+            text: userText,
             sender: "user",
-            mode: "text",
+            mode: userMode,
             timestamp: ts,
           });
+
           flattened.push({
             id: getNextMessageId(),
             text: entry.ai_response,
