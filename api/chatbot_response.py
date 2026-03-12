@@ -12,7 +12,7 @@ import os
 from langchain.memory import ConversationBufferMemory
 
 from pymongo import MongoClient
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # TODO: move this URI to environment variables
 MONGO_URI = "mongodb+srv://abhishekj3094_db_user:Abhi._.3094@cluster0.qigdlpm.mongodb.net/userschats"
@@ -93,6 +93,68 @@ def determine_dominant_emotion(text_sentiment, voice_emotion, face_emotion):
         return voice_emotion  # Voice + Face = strongest evidence
 
     return voice_emotion or text_sentiment or face_emotion
+
+
+def get_mood_trends_for_user(user_id: str, days: int = 7):
+    """
+    Aggregate per-day emotion stats for a given user over the last `days`.
+
+    Returns a dict with:
+    - buckets: [{ date: 'YYYY-MM-DD', dominant_emotion: str | None, counts: { emotion: count } }]
+    - totals: { emotion: total_count_over_range }
+    """
+    if not user_id:
+        return {"buckets": [], "totals": {}}
+
+    now = datetime.utcnow()
+    since = now - timedelta(days=days)
+
+    # Aggregate across all sessions for this user
+    cursor = chat_collection.find({"user_id": user_id})
+
+    per_day = {}
+    totals = {}
+
+    for doc in cursor:
+        history = doc.get("chat_history", [])
+        for entry in history:
+            ts = entry.get("timestamp")
+            dominant = entry.get("dominant_emotion")
+            if not ts or not dominant:
+                continue
+            # Ensure datetime
+            if isinstance(ts, str):
+                try:
+                    ts = datetime.fromisoformat(ts)
+                except Exception:
+                    continue
+            if ts < since:
+                continue
+
+            date_key = ts.date().isoformat()
+            if date_key not in per_day:
+                per_day[date_key] = {}
+            per_day[date_key][dominant] = per_day[date_key].get(dominant, 0) + 1
+
+            totals[dominant] = totals.get(dominant, 0) + 1
+
+    # Build sorted buckets
+    buckets = []
+    for date_key in sorted(per_day.keys()):
+        counts = per_day[date_key]
+        # Pick the emotion with the highest count for that day
+        dominant_for_day = (
+            max(counts.items(), key=lambda kv: kv[1])[0] if counts else None
+        )
+        buckets.append(
+            {
+                "date": date_key,
+                "dominant_emotion": dominant_for_day,
+                "counts": counts,
+            }
+        )
+
+    return {"buckets": buckets, "totals": totals}
 
 
 def _generate_conversational_response(user_id, session_id, user_text, formatted_history):

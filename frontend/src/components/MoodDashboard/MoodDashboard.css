@@ -1,0 +1,358 @@
+.mood-dashboard-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: radial-gradient(circle at top left, #eef2ff 0, #ffffff 40%, #f5f7fb 100%);
+}
+
+.mood-dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 2rem 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(10px);
+}
+
+.mood-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.15s, box-shadow 0.15s;
+}
+
+.mood-back-btn:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(148, 163, 184, 0.25);
+}
+
+.mood-header-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.mood-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.mood-header-title-row h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.mood-header-title-row p {
+  margin: 0.15rem 0 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.mood-header-icon {
+  color: var(--accent-color);
+}
+
+.mood-range-toggle {
+  display: inline-flex;
+  padding: 0.2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.range-chip {
+  border: none;
+  background: transparent;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, transform 0.15s;
+}
+
+.range-chip.active {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.mood-dashboard-main {
+  flex: 1;
+  padding: 1.5rem 2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  overflow-y: auto;
+}
+
+.mood-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.mood-summary-card {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.mood-summary-card h4 {
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.mood-summary-value {
+  margin: 0.1rem 0 0.25rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.mood-summary-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.mood-content-grid {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.mood-card {
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 1.1rem;
+  padding: 1.1rem 1.25rem 1.2rem;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.mood-card-header {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.9rem;
+}
+
+.mood-card-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.mood-card-header span {
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.mood-timeline {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.45rem;
+  height: 180px;
+}
+
+.mood-timeline-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.mood-timeline-bar-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+}
+
+.mood-timeline-bar {
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #6366f1, #4f46e5);
+  box-shadow: 0 8px 14px rgba(79, 70, 229, 0.35);
+  transition: transform 0.15s ease-out, box-shadow 0.15s;
+}
+
+.mood-timeline-bar:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 22px rgba(79, 70, 229, 0.45);
+}
+
+.mood-timeline-date {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.mood-breakdown-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.mood-breakdown-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.mood-breakdown-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 90px;
+}
+
+.mood-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #cbd5f5;
+}
+
+.mood-breakdown-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.3);
+  overflow: hidden;
+}
+
+.mood-breakdown-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6366f1, #f97316);
+}
+
+.mood-breakdown-count {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.mood-loading-card,
+.mood-error-card,
+.mood-empty-card {
+  max-width: 480px;
+  padding: 1.25rem 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.mood-loading-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(148, 163, 184, 0.4);
+  border-top-color: #4f46e5;
+  animation: spin 0.7s linear infinite;
+}
+
+.mood-empty-card h3 {
+  margin: 0 0 0.3rem;
+}
+
+.mood-empty-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Emotion-specific colour accents for bars/dots */
+.mood-calm {
+  background: linear-gradient(180deg, #22c55e, #16a34a);
+}
+
+.mood-anxious {
+  background: linear-gradient(180deg, #f97316, #ea580c);
+}
+
+.mood-sad {
+  background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+}
+
+.mood-angry {
+  background: linear-gradient(180deg, #ef4444, #b91c1c);
+}
+
+.mood-unknown {
+  background: linear-gradient(180deg, #9ca3af, #6b7280);
+}
+
+.mood-dot.mood-calm {
+  background: #22c55e;
+}
+
+.mood-dot.mood-anxious {
+  background: #f97316;
+}
+
+.mood-dot.mood-sad {
+  background: #3b82f6;
+}
+
+.mood-dot.mood-angry {
+  background: #ef4444;
+}
+
+.mood-dot.mood-unknown {
+  background: #9ca3af;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .mood-dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .mood-header-main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .mood-content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

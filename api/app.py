@@ -8,7 +8,7 @@ from flask_cors import CORS
 from sentiment_analysis import analyze_sentiment
 from face_emotion import analyze_facial_emotion
 
-from chatbot_response import generate_chatbot_response
+from chatbot_response import generate_chatbot_response, get_mood_trends_for_user
 import os
 
 from voice_emotion import analyze_voice_emotion
@@ -147,7 +147,42 @@ def analyze_voice():
 
     return jsonify({"voice_emotion": voice_emotion})
 
+
+@app.route('/mood-trends', methods=['GET'])
+def mood_trends():
+    """
+    Aggregate mood trends for a user over a time range.
+
+    Query params:
+    - user_id: required
+    - range: optional, one of '7d', '30d', '90d' (default '7d')
+    """
+    user_id = request.args.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Missing user_id"}), 400
+
+    range_param = request.args.get("range", "7d")
+    range_map = {
+        "7d": 7,
+        "30d": 30,
+        "90d": 90,
+    }
+    days = range_map.get(range_param, 7)
+
+    trends = get_mood_trends_for_user(user_id=user_id, days=days)
+
+    return jsonify(
+        {
+            "user_id": user_id,
+            "range": range_param,
+            "days": days,
+            "buckets": trends.get("buckets", []),
+            "totals": trends.get("totals", {}),
+        }
+    )
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Use 5001 to avoid Windows port 5000 reservation / permission issues
+    app.run(debug=True, port=5001)
 
     

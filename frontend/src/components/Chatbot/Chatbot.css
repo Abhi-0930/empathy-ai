@@ -66,6 +66,27 @@
   color: transparent;
 }
 
+.mood-dashboard-btn {
+  margin-top: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  border: none;
+  background: rgba(79, 70, 229, 0.08);
+  color: var(--accent-color);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.15s;
+}
+
+.mood-dashboard-btn:hover {
+  background: rgba(79, 70, 229, 0.14);
+  transform: translateY(-1px);
+}
+
 .new-chat-btn {
   display: flex;
   align-items: center;

@@ -22,6 +22,7 @@ import {
   MoreVertical,
   Copy,
   Check,
+  Activity,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -189,7 +190,7 @@ const MentalHealthChatbot = () => {
       formData.append("text", textToSend);
 
       const res = await axios.post(
-        "http://127.0.0.1:5000/unified_emotion",
+        "http://127.0.0.1:5001/unified_emotion",
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -263,7 +264,7 @@ const MentalHealthChatbot = () => {
       }
       try {
         const res = await axios.get(
-          `http://127.0.0.1:5000/sessions/${activeChat}/history`,
+          `http://127.0.0.1:5001/sessions/${activeChat}/history`,
           {
             params: { user_id: user._id },
           }
@@ -452,7 +453,7 @@ const MentalHealthChatbot = () => {
           setLastInputType("video");
           setIsBotTyping(true);
           const res = await axios.post(
-            "http://127.0.0.1:5000/unified_emotion",
+            "http://127.0.0.1:5001/unified_emotion",
             formData,
             {
               headers: { "Content-Type": "multipart/form-data" },
@@ -656,7 +657,7 @@ const MentalHealthChatbot = () => {
           setLastInputType("voice");
           setIsBotTyping(true);
           const res = await axios.post(
-            "http://127.0.0.1:5000/unified_emotion",
+            "http://127.0.0.1:5001/unified_emotion",
             formData,
             {
               headers: { "Content-Type": "multipart/form-data" },
@@ -796,6 +797,14 @@ const MentalHealthChatbot = () => {
           <button className="new-chat-btn" onClick={handleNewChat}>
             <Plus size={20} />
             <span>New Chat</span>
+          </button>
+          <button
+            type="button"
+            className="mood-dashboard-btn"
+            onClick={() => navigate("/mood-dashboard")}
+          >
+            <Activity size={16} />
+            <span>Mood trends</span>
           </button>
         </div>
 

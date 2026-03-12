@@ -25,7 +25,7 @@ const SharedChat = () => {
 
         // Fetch full history from Python API (public session history)
         const histRes = await axios.get(
-          `http://127.0.0.1:5000/sessions/${metaData.sessionId}/history`
+          `http://127.0.0.1:5001/sessions/${metaData.sessionId}/history`
         );
 
         const history = histRes.data.messages || [];
