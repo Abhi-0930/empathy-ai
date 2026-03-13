@@ -13,6 +13,9 @@ from langchain.memory import ConversationBufferMemory
 
 from pymongo import MongoClient
 from datetime import datetime, timedelta
+from cryptography.fernet import Fernet, InvalidToken
+import base64
+import hashlib
 
 # TODO: move this URI to environment variables
 MONGO_URI = "mongodb+srv://abhishekj3094_db_user:Abhi._.3094@cluster0.qigdlpm.mongodb.net/userschats"
@@ -33,8 +36,8 @@ def store_chat_in_db(user_id, session_id, user_text, ai_response, voice_emotion,
     """Store user and AI messages in the database, grouped by session."""
     chat_entry = {
         "timestamp": datetime.utcnow(),
-        "user_message": user_text,
-        "ai_response": ai_response,
+        "user_message": _encrypt_text(user_text),
+        "ai_response": _encrypt_text(ai_response),
         "voice_emotion": voice_emotion,
         "dominant_emotion": dominant_emotion,
     }
@@ -69,7 +72,16 @@ def get_chat_history_from_db(user_id, session_id):
 
     existing_chat = chat_collection.find_one(query)
     if existing_chat:
-        return existing_chat.get("chat_history", [])
+        history = existing_chat.get("chat_history", [])
+        decrypted = []
+        for entry in history:
+            if not isinstance(entry, dict):
+                continue
+            e = dict(entry)
+            e["user_message"] = _decrypt_text(e.get("user_message", ""))
+            e["ai_response"] = _decrypt_text(e.get("ai_response", ""))
+            decrypted.append(e)
+        return decrypted
 
     return []
     # chat_history = chat_collection.find({"user_id": user_id}).sort("timestamp", 1)
@@ -79,6 +91,36 @@ load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 # Slightly higher temperature for more varied, less repetitive responses
 llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.8)
+
+# Encryption for chat content-at-rest (optional).
+# Set either:
+# - CHAT_ENCRYPTION_KEY (Fernet key), OR
+# - CHAT_ENCRYPTION_PASSPHRASE (any string; derived deterministically).
+_fernet = None
+_raw_key = os.getenv("CHAT_ENCRYPTION_KEY")
+_passphrase = os.getenv("CHAT_ENCRYPTION_PASSPHRASE")
+
+if _raw_key:
+    _fernet = Fernet(_raw_key.encode("utf-8"))
+elif _passphrase:
+    digest = hashlib.sha256(_passphrase.encode("utf-8")).digest()
+    _fernet = Fernet(base64.urlsafe_b64encode(digest))
+
+
+def _encrypt_text(value: str):
+    if not value or _fernet is None:
+        return value
+    return _fernet.encrypt(value.encode("utf-8")).decode("utf-8")
+
+
+def _decrypt_text(value: str):
+    if not value or _fernet is None:
+        return value
+    try:
+        return _fernet.decrypt(value.encode("utf-8")).decode("utf-8")
+    except (InvalidToken, Exception):
+        # Backwards compat: plaintext rows or wrong key.
+        return value
 
 # Create memory for storing chat history (not currently used directly)
 memory = ConversationBufferMemory()

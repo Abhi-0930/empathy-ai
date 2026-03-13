@@ -21,6 +21,16 @@ app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 CORS(app)
 
+# Optional one-time migration: encrypt existing plaintext chat messages.
+try:
+    if os.getenv("MIGRATE_EXISTING_CHATS_ON_STARTUP", "").lower() in ("1", "true", "yes"):
+        from migrate_encrypt_chats import migrate_all_users
+
+        migrate_all_users()
+except Exception:
+    # Never block server start due to migration issues
+    pass
+
 @app.route('/analyze_statement', methods=["POST"])
 def analyze_statement():
     """
