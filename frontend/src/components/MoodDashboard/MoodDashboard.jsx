@@ -187,11 +187,6 @@ const MoodDashboard = () => {
                       const totalForDay = Object.values(
                         bucket.counts || {}
                       ).reduce((s, v) => s + v, 0);
-                      const maxBarHeightPx = 140; // within 180px container
-                      const barHeight =
-                        maxCountForScale > 0
-                          ? (totalForDay / maxCountForScale) * maxBarHeightPx
-                          : 0;
                       const emotion = bucket.dominant_emotion || "unknown";
                       return (
                         <div
@@ -202,13 +197,20 @@ const MoodDashboard = () => {
                             <div
                               className={`mood-timeline-bar mood-${emotion}`}
                               style={{
-                                height: `${Math.max(40, barHeight)}px`,
+                                height: "130px", // same height for all days
                               }}
                               title={`${bucket.date} – ${emotion} (${totalForDay} entries)`}
                             />
                           </div>
                           <span className="mood-timeline-date">
-                            {bucket.date.slice(5)}
+                            {new Date(bucket.date).toLocaleDateString(
+                              undefined,
+                              {
+                                day: "numeric",
+                                month: "numeric",
+                                year: "2-digit",
+                              }
+                            )}
                           </span>
                         </div>
                       );

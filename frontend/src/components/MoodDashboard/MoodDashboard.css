@@ -172,18 +172,17 @@
 .mood-timeline {
   display: flex;
   align-items: flex-end;
-  justify-content: flex-start;
-  gap: 0.6rem;
-  height: 140px;
-  padding: 0.5rem 0.75rem 0.5rem;
-  border-radius: 0.75rem;
-  background-color: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  justify-content: center;
+  gap: 2.5rem;
+  height: 170px;
+  padding: 0;
+  max-width: 320px;
+  margin: 0.25rem auto 0.75rem;
 }
 
 .mood-timeline-item {
   flex: 0 0 auto;
-  width: 18px; /* slim column */
+  width: 36px; /* bar slot width */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -200,9 +199,9 @@
 }
 
 .mood-timeline-bar {
-  width: 14px;
+  width: 24px;
   margin: 0 auto;
-  border-radius: 6px;
+  border-radius: 8px;
   background-color: #4f46e5;
   box-shadow: 0 4px 8px rgba(79, 70, 229, 0.25);
   transition: transform 0.15s ease-out, box-shadow 0.15s;
@@ -214,8 +213,9 @@
 }
 
 .mood-timeline-date {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
+  margin-top: 0.25rem;
 }
 
 .mood-breakdown-list {
@@ -303,25 +303,17 @@
   color: var(--text-secondary);
 }
 
-/* Emotion-specific colour accents for bars/dots */
-.mood-calm {
-  background-color: #22c55e;
+/* Emotion-specific colour accents for bars/dots (sentiment labels) */
+.mood-Positive {
+  background-color: #16a34a; /* green */
 }
 
-.mood-anxious {
-  background-color: #f97316;
+.mood-Neutral {
+  background-color: #eab308; /* amber */
 }
 
-.mood-sad {
-  background-color: #3b82f6;
-}
-
-.mood-angry {
-  background-color: #ef4444;
-}
-
-.mood-unknown {
-  background-color: #9ca3af;
+.mood-Error {
+  background-color: #dc2626; /* red */
 }
 
 .mood-legend {
@@ -362,24 +354,16 @@
   background-color: rgba(248, 250, 252, 0.9);
 }
 
-.mood-dot.mood-calm {
-  background: #22c55e;
+.mood-dot.mood-Positive {
+  background: #16a34a;
 }
 
-.mood-dot.mood-anxious {
-  background: #f97316;
+.mood-dot.mood-Neutral {
+  background: #eab308;
 }
 
-.mood-dot.mood-sad {
-  background: #3b82f6;
-}
-
-.mood-dot.mood-angry {
-  background: #ef4444;
-}
-
-.mood-dot.mood-unknown {
-  background: #9ca3af;
+.mood-dot.mood-Error {
+  background: #dc2626;
 }
 
 @keyframes spin {
