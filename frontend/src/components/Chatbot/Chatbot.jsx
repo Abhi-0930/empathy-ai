@@ -23,12 +23,14 @@ import {
   Copy,
   Check,
   Activity,
+  Download,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import "./Chatbot.css";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import logoImage from "../../assets/logo.jpg";
 
 const MentalHealthChatbot = () => {
   // State management
@@ -367,6 +369,36 @@ const MentalHealthChatbot = () => {
       setCopiedShare(false);
     } catch (error) {
       console.error("Error creating share link:", error);
+    }
+  };
+
+  const handleExportPdf = async (chatId) => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`/api/chats/${chatId}/export/pdf`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) {
+        console.error("Failed to export chat");
+        showNotification("Failed to export chat as PDF.", "error");
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `chat-${chatId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error exporting chat:", error);
+      showNotification("Error exporting chat as PDF.", "error");
     }
   };
 
@@ -898,6 +930,17 @@ const MentalHealthChatbot = () => {
                         <span>Share</span>
                       </button>
                       <button
+                        className="chat-actions-item"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenChatMenuId(null);
+                          handleExportPdf(chat._id);
+                        }}
+                      >
+                        <Download size={14} />
+                        <span>Export PDF</span>
+                      </button>
+                      <button
                         className="chat-actions-item destructive"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1027,7 +1070,7 @@ const MentalHealthChatbot = () => {
           {isBotTyping && (
             <div className="typing-container">
               <div className="typing-icon">
-                <span>AI</span>
+                <img src={logoImage} alt="Empathy AI" />
               </div>
               <div className="typing-lines">
                 <div className="typing-line line1" />

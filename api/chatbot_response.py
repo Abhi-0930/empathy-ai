@@ -30,6 +30,8 @@ MAX_RAW_TURNS_IN_PROMPT = 12  # last N user+AI turns included verbatim
 SESSION_SUMMARY_TRIGGER_TURNS = 20  # summarize once chat grows beyond this
 USER_MEMORY_MAX_TURNS = 30  # cross-session turns used to build user memory
 USER_MEMORY_TTL_HOURS = 24
+SUMMARY_TRANSCRIPT_MAX_CHARS = 4500
+SUMMARY_MAX_CHARS = 900
 
 
 def store_chat_in_db(user_id, session_id, user_text, ai_response, voice_emotion, dominant_emotion):
@@ -189,7 +191,7 @@ def _summarize_text_block(title: str, turns):
     if not turns:
         return ""
 
-    # Build a compact transcript
+    # Build a compact transcript (hard capped by chars to avoid token overflow)
     lines = []
     for t in turns:
         u = (t.get("user_message") or "").strip()
@@ -198,7 +200,9 @@ def _summarize_text_block(title: str, turns):
             lines.append(f"User: {u}")
         if a:
             lines.append(f"Assistant: {a}")
-    transcript = "\n".join(lines[-200:])  # cap
+    transcript = "\n".join(lines[-80:])  # cap by turns first
+    if len(transcript) > SUMMARY_TRANSCRIPT_MAX_CHARS:
+        transcript = transcript[-SUMMARY_TRANSCRIPT_MAX_CHARS:]
 
     sys = SystemMessage(
         content=(
@@ -220,7 +224,10 @@ def _summarize_text_block(title: str, turns):
         )
     )
     resp = llm.invoke([sys, human])
-    return (resp.content or "").strip()
+    summary = (resp.content or "").strip()
+    if len(summary) > SUMMARY_MAX_CHARS:
+        summary = summary[:SUMMARY_MAX_CHARS].rstrip()
+    return summary
 
 
 def get_or_update_session_summary(user_id: str, session_id: str, chat_history):
@@ -245,6 +252,8 @@ def get_or_update_session_summary(user_id: str, session_id: str, chat_history):
     # Summarize all but the last MAX_RAW_TURNS_IN_PROMPT turns
     older = chat_history[:-MAX_RAW_TURNS_IN_PROMPT] if len(chat_history) > MAX_RAW_TURNS_IN_PROMPT else []
     summary = _summarize_text_block("Session summary", older)
+    if len(summary) > SUMMARY_MAX_CHARS:
+        summary = summary[:SUMMARY_MAX_CHARS].rstrip()
 
     session_summary_collection.update_one(
         {"user_id": user_id, "session_id": session_id},
@@ -270,6 +279,8 @@ def get_or_update_user_memory(user_id: str):
 
     turns = _get_recent_turns_across_sessions(user_id, USER_MEMORY_MAX_TURNS)
     summary = _summarize_text_block("User long-term memory (across sessions)", turns)
+    if len(summary) > SUMMARY_MAX_CHARS:
+        summary = summary[:SUMMARY_MAX_CHARS].rstrip()
 
     user_memory_collection.update_one(
         {"user_id": user_id},
@@ -358,9 +369,9 @@ def _generate_conversational_response(user_id, session_id, user_text, formatted_
 
     memory_block = ""
     if user_memory:
-        memory_block += f"\n\n### Cross-session memory\n{user_memory}"
+        memory_block += f"\n\n### Cross-session memory\n{(user_memory[:SUMMARY_MAX_CHARS]).rstrip()}"
     if session_summary:
-        memory_block += f"\n\n### This session so far (summary)\n{session_summary}"
+        memory_block += f"\n\n### This session so far (summary)\n{(session_summary[:SUMMARY_MAX_CHARS]).rstrip()}"
 
     if memory_block:
         system_message = SystemMessage(content=system_message.content + memory_block)
@@ -457,9 +468,9 @@ def generate_chatbot_response(user_id, session_id, user_text, face_emotion, voic
 
     memory_block = ""
     if user_memory:
-        memory_block += f"\n\n### Cross-session memory\n{user_memory}"
+        memory_block += f"\n\n### Cross-session memory\n{(user_memory[:SUMMARY_MAX_CHARS]).rstrip()}"
     if session_summary:
-        memory_block += f"\n\n### This session so far (summary)\n{session_summary}"
+        memory_block += f"\n\n### This session so far (summary)\n{(session_summary[:SUMMARY_MAX_CHARS]).rstrip()}"
     if memory_block:
         system_message = SystemMessage(content=system_message.content + memory_block)
 
