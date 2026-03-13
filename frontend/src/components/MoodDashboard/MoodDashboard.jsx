@@ -187,9 +187,10 @@ const MoodDashboard = () => {
                       const totalForDay = Object.values(
                         bucket.counts || {}
                       ).reduce((s, v) => s + v, 0);
-                      const heightPct =
+                      const maxBarHeightPx = 140; // within 180px container
+                      const barHeight =
                         maxCountForScale > 0
-                          ? (totalForDay / maxCountForScale) * 100
+                          ? (totalForDay / maxCountForScale) * maxBarHeightPx
                           : 0;
                       const emotion = bucket.dominant_emotion || "unknown";
                       return (
@@ -201,7 +202,7 @@ const MoodDashboard = () => {
                             <div
                               className={`mood-timeline-bar mood-${emotion}`}
                               style={{
-                                height: `${Math.max(30, heightPct)}%`,
+                                height: `${Math.max(40, barHeight)}px`,
                               }}
                               title={`${bucket.date} – ${emotion} (${totalForDay} entries)`}
                             />
