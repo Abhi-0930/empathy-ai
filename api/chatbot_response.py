@@ -19,6 +19,14 @@ MONGO_URI = "mongodb+srv://abhishekj3094_db_user:Abhi._.3094@cluster0.qigdlpm.mo
 client = MongoClient(MONGO_URI)
 db = client["visionava_users"]
 chat_collection = db["users_chat"]
+session_summary_collection = db["session_summaries"]
+user_memory_collection = db["user_memory"]
+
+# Summarization + memory tuning
+MAX_RAW_TURNS_IN_PROMPT = 12  # last N user+AI turns included verbatim
+SESSION_SUMMARY_TRIGGER_TURNS = 20  # summarize once chat grows beyond this
+USER_MEMORY_MAX_TURNS = 30  # cross-session turns used to build user memory
+USER_MEMORY_TTL_HOURS = 24
 
 
 def store_chat_in_db(user_id, session_id, user_text, ai_response, voice_emotion, dominant_emotion):
@@ -95,6 +103,140 @@ def determine_dominant_emotion(text_sentiment, voice_emotion, face_emotion):
     return voice_emotion or text_sentiment or face_emotion
 
 
+def _format_history_for_prompt(chat_history, max_turns: int):
+    """
+    Convert stored chat_history to LangChain messages, keeping only the last max_turns turns.
+    A "turn" here is (user_message + ai_response).
+    """
+    if not chat_history:
+        return []
+
+    trimmed = chat_history[-max_turns:]
+    formatted = []
+    for entry in trimmed:
+        formatted.append(HumanMessage(content=entry.get("user_message", "")))
+        formatted.append(SystemMessage(content=entry.get("ai_response", "")))
+    return formatted
+
+
+def _get_recent_turns_across_sessions(user_id: str, limit_turns: int):
+    """
+    Fetch recent turns across all sessions for a user, sorted by timestamp ascending.
+    Returns a list of dicts with user_message/ai_response/timestamp.
+    """
+    if not user_id:
+        return []
+
+    all_entries = []
+    cursor = chat_collection.find({"user_id": user_id})
+    for doc in cursor:
+        for entry in doc.get("chat_history", []):
+            ts = entry.get("timestamp")
+            if not ts:
+                continue
+            all_entries.append(entry)
+
+    all_entries.sort(key=lambda e: e.get("timestamp") or datetime.utcnow())
+    return all_entries[-limit_turns:]
+
+
+def _summarize_text_block(title: str, turns):
+    """
+    Summarize a list of turns (dicts with user_message/ai_response) into a compact memory block.
+    """
+    if not turns:
+        return ""
+
+    # Build a compact transcript
+    lines = []
+    for t in turns:
+        u = (t.get("user_message") or "").strip()
+        a = (t.get("ai_response") or "").strip()
+        if u:
+            lines.append(f"User: {u}")
+        if a:
+            lines.append(f"Assistant: {a}")
+    transcript = "\n".join(lines[-200:])  # cap
+
+    sys = SystemMessage(
+        content=(
+            "You are a summarization assistant for a mental-health chat app. "
+            "Create a concise, factual summary that is safe to reuse in future prompts.\n\n"
+            "Rules:\n"
+            "- Keep it under ~1200 characters.\n"
+            "- Focus on stable facts: recurring themes, triggers, helpful coping strategies, preferences.\n"
+            "- Avoid quoting long text; paraphrase.\n"
+            "- Avoid medical diagnosis. Keep it supportive and neutral.\n"
+            "- If there is no meaningful content, return an empty string."
+        )
+    )
+    human = HumanMessage(
+        content=(
+            f"Title: {title}\n\n"
+            f"Transcript:\n{transcript}\n\n"
+            "Return only the summary text."
+        )
+    )
+    resp = llm.invoke([sys, human])
+    return (resp.content or "").strip()
+
+
+def get_or_update_session_summary(user_id: str, session_id: str, chat_history):
+    """
+    Store a rolling summary for a session when it becomes long.
+    """
+    if not user_id or not session_id:
+        return ""
+
+    # Only summarize when large enough
+    if len(chat_history) < SESSION_SUMMARY_TRIGGER_TURNS:
+        existing = session_summary_collection.find_one({"user_id": user_id, "session_id": session_id})
+        return (existing or {}).get("summary", "") if existing else ""
+
+    existing = session_summary_collection.find_one({"user_id": user_id, "session_id": session_id})
+    last_updated = (existing or {}).get("updatedAt")
+    # If updated recently (within 1 hour), reuse
+    if last_updated and isinstance(last_updated, datetime):
+        if datetime.utcnow() - last_updated < timedelta(hours=1):
+            return (existing or {}).get("summary", "") or ""
+
+    # Summarize all but the last MAX_RAW_TURNS_IN_PROMPT turns
+    older = chat_history[:-MAX_RAW_TURNS_IN_PROMPT] if len(chat_history) > MAX_RAW_TURNS_IN_PROMPT else []
+    summary = _summarize_text_block("Session summary", older)
+
+    session_summary_collection.update_one(
+        {"user_id": user_id, "session_id": session_id},
+        {"$set": {"summary": summary, "updatedAt": datetime.utcnow()}},
+        upsert=True,
+    )
+    return summary
+
+
+def get_or_update_user_memory(user_id: str):
+    """
+    Cross-session memory summary for the user (cached).
+    """
+    if not user_id:
+        return ""
+
+    existing = user_memory_collection.find_one({"user_id": user_id})
+    if existing:
+        updated = existing.get("updatedAt")
+        if updated and isinstance(updated, datetime):
+            if datetime.utcnow() - updated < timedelta(hours=USER_MEMORY_TTL_HOURS):
+                return existing.get("summary", "") or ""
+
+    turns = _get_recent_turns_across_sessions(user_id, USER_MEMORY_MAX_TURNS)
+    summary = _summarize_text_block("User long-term memory (across sessions)", turns)
+
+    user_memory_collection.update_one(
+        {"user_id": user_id},
+        {"$set": {"summary": summary, "updatedAt": datetime.utcnow()}},
+        upsert=True,
+    )
+    return summary
+
+
 def get_mood_trends_for_user(user_id: str, days: int = 7):
     """
     Aggregate per-day emotion stats for a given user over the last `days`.
@@ -168,6 +310,19 @@ def _generate_conversational_response(user_id, session_id, user_text, formatted_
             "Stay in character as a mental health companion. Do not provide detailed answers to non–mental-health topics."
         )
     )
+    user_memory = get_or_update_user_memory(user_id)
+    session_history = get_chat_history_from_db(user_id, session_id)
+    session_summary = get_or_update_session_summary(user_id, session_id, session_history)
+
+    memory_block = ""
+    if user_memory:
+        memory_block += f"\n\n### Cross-session memory\n{user_memory}"
+    if session_summary:
+        memory_block += f"\n\n### This session so far (summary)\n{session_summary}"
+
+    if memory_block:
+        system_message = SystemMessage(content=system_message.content + memory_block)
+
     user_message = HumanMessage(content=user_text)
     messages = formatted_history + [system_message, user_message]
     ai_response = llm.invoke(messages)
@@ -200,11 +355,12 @@ def generate_chatbot_response(user_id, session_id, user_text, face_emotion, voic
     # Retrieve previous conversation history for this session from MongoDB Atlas
     chat_history = get_chat_history_from_db(user_id, session_id)
 
-    # Convert chat history into LangChain-compatible format
-    formatted_history = []
-    for entry in chat_history:
-        formatted_history.append(HumanMessage(content=entry["user_message"]))
-        formatted_history.append(SystemMessage(content=entry["ai_response"]))
+    # Summaries / cross-session memory
+    user_memory = get_or_update_user_memory(user_id)
+    session_summary = get_or_update_session_summary(user_id, session_id, chat_history)
+
+    # Convert chat history into LangChain-compatible format (trimmed)
+    formatted_history = _format_history_for_prompt(chat_history, MAX_RAW_TURNS_IN_PROMPT)
 
     # Text-only (no voice, no face) → normal conversational chat
     if not voice_emotion and not face_emotion:
@@ -256,6 +412,14 @@ def generate_chatbot_response(user_id, session_id, user_text, face_emotion, voic
             "Keep paragraphs short, use bullet lists instead of long blocks of text, and use **bold** for key phrases or section titles."
         )
     )
+
+    memory_block = ""
+    if user_memory:
+        memory_block += f"\n\n### Cross-session memory\n{user_memory}"
+    if session_summary:
+        memory_block += f"\n\n### This session so far (summary)\n{session_summary}"
+    if memory_block:
+        system_message = SystemMessage(content=system_message.content + memory_block)
 
     previous_reply_block = (
         "\n\nHere are your last replies in this session. "
