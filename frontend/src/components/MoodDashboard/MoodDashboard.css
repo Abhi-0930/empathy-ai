@@ -308,12 +308,16 @@
   background-color: #16a34a; /* green */
 }
 
+.mood-Negative {
+  background-color: #dc2626; /* red */
+}
+
 .mood-Neutral {
   background-color: #eab308; /* amber */
 }
 
 .mood-Error {
-  background-color: #dc2626; /* red */
+  background-color: #6b7280; /* grey for technical errors */
 }
 
 .mood-legend {
@@ -358,12 +362,16 @@
   background: #16a34a;
 }
 
+.mood-dot.mood-Negative {
+  background: #dc2626;
+}
+
 .mood-dot.mood-Neutral {
   background: #eab308;
 }
 
 .mood-dot.mood-Error {
-  background: #dc2626;
+  background: #6b7280;
 }
 
 @keyframes spin {
