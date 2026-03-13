@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+import { Camera, Mic } from "lucide-react";
 import "../Chatbot/Chatbot.css";
 
 const SharedChat = () => {
@@ -32,16 +33,36 @@ const SharedChat = () => {
         const flattened = [];
         history.forEach((entry, index) => {
           const ts = entry.timestamp ? new Date(entry.timestamp) : new Date();
+
+          let userMode = "text";
+          let userText = entry.user_message || "";
+
+          if (!userText) {
+            if (entry.voice_emotion) {
+              userMode = "voice";
+            } else {
+              userMode = "video";
+            }
+          } else if (
+            typeof userText === "string" &&
+            userText.toLowerCase().startsWith("error in transcription")
+          ) {
+            userMode = "voice";
+            userText = "";
+          }
+
           flattened.push({
             id: index * 2 + 1,
-            text: entry.user_message,
+            text: userText,
             sender: "user",
+            mode: userMode,
             timestamp: ts,
           });
           flattened.push({
             id: index * 2 + 2,
             text: entry.ai_response,
             sender: "bot",
+            mode: "text",
             timestamp: ts,
           });
         });
@@ -108,7 +129,21 @@ const SharedChat = () => {
               }`}
             >
               <div className="message-content">
-                <p>{message.text}</p>
+                {message.sender === "bot" ? (
+                  <p>{message.text}</p>
+                ) : message.mode === "video" ? (
+                  <div className="message-media-label">
+                    <Camera size={16} />
+                    <span>Video emotion analysis</span>
+                  </div>
+                ) : message.mode === "voice" ? (
+                  <div className="message-media-label">
+                    <Mic size={16} />
+                    <span>Voice emotion analysis</span>
+                  </div>
+                ) : (
+                  <p>{message.text}</p>
+                )}
               </div>
               <div className="message-time">
                 {formatTime(message.timestamp)}

@@ -19,7 +19,11 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-CORS(app)
+# Allow frontend at localhost:5173 to call this API
+CORS(
+    app,
+    resources={r"/*": {"origins": "http://localhost:5173"}},
+)
 
 # Optional one-time migration: encrypt existing plaintext chat messages.
 try:
