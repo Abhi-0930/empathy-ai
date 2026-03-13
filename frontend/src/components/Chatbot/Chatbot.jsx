@@ -23,6 +23,7 @@ import {
   Copy,
   Check,
   Activity,
+  Flame,
   Download,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -866,7 +867,7 @@ const MentalHealthChatbot = () => {
             className="mood-dashboard-btn"
             onClick={() => navigate("/guided-exercises")}
           >
-            <Activity size={16} />
+            <Flame size={16} />
             <span>Guided exercises</span>
           </button>
         </div>

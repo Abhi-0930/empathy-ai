@@ -102,6 +102,91 @@ const defaultExercises = [
     ],
     triggers: ["tense", "difficulty-sleeping"],
   },
+  {
+    exerciseId: "mindfulness-gratitude-3",
+    name: "3‑Point Gratitude Check‑In",
+    type: "mindfulness",
+    difficulty: "easy",
+    durationMinutes: 6,
+    steps: [
+      {
+        title: "Pause and breathe",
+        description:
+          "Take three slow breaths. Let your shoulders drop and bring your attention to this moment.",
+      },
+      {
+        title: "Grateful for yourself",
+        description:
+          "Think of one thing you appreciate about yourself today (a small action, quality, or effort).",
+      },
+      {
+        title: "Grateful for someone else",
+        description:
+          "Bring to mind one person (or pet) you feel thankful for and why.",
+      },
+      {
+        title: "Grateful for your surroundings",
+        description:
+          "Notice one thing in your environment you’re glad to have right now (light, object, comfort).",
+      },
+    ],
+    triggers: ["low-mood", "self-criticism"],
+  },
+  {
+    exerciseId: "visualisation-safe-place",
+    name: "Safe Place Visualisation",
+    type: "relaxation",
+    difficulty: "medium",
+    durationMinutes: 10,
+    steps: [
+      {
+        title: "Close your eyes gently",
+        description:
+          "Find a comfortable position and allow your eyes to close or soften your gaze.",
+      },
+      {
+        title: "Imagine a safe place",
+        description:
+          "Picture a place where you feel completely safe and at ease. It can be real or imagined.",
+      },
+      {
+        title: "Engage your senses",
+        description:
+          "Notice what you can see, hear, feel, and smell in this place. Add as many calming details as you like.",
+      },
+      {
+        title: "Anchor the feeling",
+        description:
+          "Notice how your body feels in this safe place. Take a slow breath and imagine saving this feeling as an inner ‘snapshot’.",
+      },
+    ],
+    triggers: ["anxious", "before-sleep"],
+  },
+  {
+    exerciseId: "micro-reset-posture",
+    name: "1‑Minute Posture Reset",
+    type: "grounding",
+    difficulty: "easy",
+    durationMinutes: 1,
+    steps: [
+      {
+        title: "Notice your posture",
+        description:
+          "Without judging, observe how you’re sitting or standing right now.",
+      },
+      {
+        title: "Lengthen and soften",
+        description:
+          "Gently lengthen your spine, roll your shoulders back and down, and unclench your jaw.",
+      },
+      {
+        title: "Connect with the ground",
+        description:
+          "Feel your feet on the floor and the support beneath you. Take one slow breath in and out.",
+      },
+    ],
+    triggers: ["tension", "screen-fatigue"],
+  },
 ];
 
 async function ensureSeeded() {

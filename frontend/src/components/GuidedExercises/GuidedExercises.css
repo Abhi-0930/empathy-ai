@@ -20,6 +20,7 @@
   align-items: center;
   gap: 0.35rem;
   padding: 0.45rem 0.85rem;
+  margin-right: 0.9rem;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.5);
   background: #ffffff;
@@ -203,6 +204,22 @@
   margin-bottom: 0.25rem;
 }
 
+.guided-step-progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+  margin-bottom: 0.6rem;
+}
+
+.guided-step-progress-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #4f46e5;
+  transition: width 0.2s ease-out;
+}
+
 .guided-step-card h3 {
   margin: 0 0 0.4rem;
   font-size: 1rem;
@@ -223,18 +240,47 @@
 
 .guided-step-progress {
   display: flex;
-  gap: 0.3rem;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-width: 260px;
 }
 
-.guided-dot {
-  width: 7px;
-  height: 7px;
+.guided-step-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.45rem;
   border-radius: 999px;
-  background: #e5e7eb;
+  background: #f3f4f6;
+  font-size: 0.8rem;
+  color: #6b7280;
 }
 
-.guided-dot-active {
+.guided-step-pill.active {
+  background: #e0e7ff;
+  color: #1f2937;
+}
+
+.guided-step-pill.completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.guided-step-pill-index {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: #4f46e5;
+  color: #ffffff;
+  font-size: 0.7rem;
+}
+
+.guided-step-pill.completed .guided-step-pill-index {
+  background: #16a34a;
+}
 }
 
 .guided-next-btn {

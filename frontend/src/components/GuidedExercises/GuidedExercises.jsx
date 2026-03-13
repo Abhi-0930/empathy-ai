@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Activity, Clock, Play, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Flame, Clock, Play, CheckCircle2 } from "lucide-react";
 import "./GuidedExercises.css";
 
 const GuidedExercises = () => {
@@ -47,10 +47,30 @@ const GuidedExercises = () => {
     setActiveId(exercise.exerciseId);
     setActiveExercise(exercise);
     setStepIndex(0);
+
+    // Track start for analytics
+    const token = localStorage.getItem("token");
+    if (token) {
+      fetch(`/api/exercises/${exercise.exerciseId}/usage`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: "started" }),
+      }).catch(() => {});
+    }
   };
 
   const currentStep =
     activeExercise && activeExercise.steps && activeExercise.steps[stepIndex];
+
+  const progressPercent =
+    activeExercise && activeExercise.steps?.length
+      ? Math.round(
+          ((stepIndex + 1) / activeExercise.steps.length) * 100
+        )
+      : 0;
 
   const handleNextStep = async () => {
     if (!activeExercise) return;
@@ -87,7 +107,7 @@ const GuidedExercises = () => {
           </button>
           <div className="guided-header-main">
             <div className="guided-header-title-row">
-              <Activity size={24} className="guided-header-icon" />
+              <Flame size={24} className="guided-header-icon" />
               <div>
                 <h1>Guided exercises</h1>
                 <p>
@@ -161,6 +181,12 @@ const GuidedExercises = () => {
                           Step {stepIndex + 1} of{" "}
                           {activeExercise.steps.length}
                         </div>
+                        <div className="guided-step-progress-bar">
+                          <div
+                            className="guided-step-progress-bar-fill"
+                            style={{ width: `${progressPercent}%` }}
+                          />
+                        </div>
                         <h3>{currentStep.title}</h3>
                         <p>{currentStep.description}</p>
                       </div>
@@ -168,15 +194,24 @@ const GuidedExercises = () => {
 
                     <div className="guided-step-footer">
                       <div className="guided-step-progress">
-                        {activeExercise.steps.map((_, i) => (
-                          <span
+                        {activeExercise.steps.map((step, i) => (
+                          <div
                             key={i}
                             className={
-                              i <= stepIndex
-                                ? "guided-dot guided-dot-active"
-                                : "guided-dot"
+                              i < stepIndex
+                                ? "guided-step-pill completed"
+                                : i === stepIndex
+                                ? "guided-step-pill active"
+                                : "guided-step-pill"
                             }
-                          />
+                          >
+                            <span className="guided-step-pill-index">
+                              {i + 1}
+                            </span>
+                            <span className="guided-step-pill-title">
+                              {step.title}
+                            </span>
+                          </div>
                         ))}
                       </div>
                       <button
