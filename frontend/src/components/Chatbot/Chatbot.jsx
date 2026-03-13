@@ -861,6 +861,14 @@ const MentalHealthChatbot = () => {
             <Activity size={16} />
             <span>Mood trends</span>
           </button>
+          <button
+            type="button"
+            className="mood-dashboard-btn"
+            onClick={() => navigate("/guided-exercises")}
+          >
+            <Activity size={16} />
+            <span>Guided exercises</span>
+          </button>
         </div>
 
         <div className="search-container">

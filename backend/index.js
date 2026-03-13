@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/user.route.js";
 import chatRoutes from "./routes/chat.route.js";
+import exerciseRoutes from "./routes/exercise.route.js";
 import cors from "cors";
 
 dotenv.config();
@@ -24,6 +25,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/chats", chatRoutes);
+app.use("/api/exercises", exerciseRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello, Visionava!");
