@@ -172,16 +172,18 @@
 .mood-timeline {
   display: flex;
   align-items: flex-end;
-  gap: 0.45rem;
-  height: 180px;
-  padding: 0.5rem 0.25rem 0.25rem;
+  justify-content: flex-start;
+  gap: 0.6rem;
+  height: 140px;
+  padding: 0.5rem 0.75rem 0.5rem;
   border-radius: 0.75rem;
   background-color: #ffffff;
   border: 1px solid rgba(226, 232, 240, 0.9);
 }
 
 .mood-timeline-item {
-  flex: 1;
+  flex: 0 0 auto;
+  width: 18px; /* slim column */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -198,10 +200,11 @@
 }
 
 .mood-timeline-bar {
-  width: 100%;
-  border-radius: 999px;
+  width: 14px;
+  margin: 0 auto;
+  border-radius: 6px;
   background-color: #4f46e5;
-  box-shadow: 0 8px 14px rgba(79, 70, 229, 0.25);
+  box-shadow: 0 4px 8px rgba(79, 70, 229, 0.25);
   transition: transform 0.15s ease-out, box-shadow 0.15s;
 }
 
