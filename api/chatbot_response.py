@@ -477,7 +477,8 @@ def generate_chatbot_response(user_id, session_id, user_text, face_emotion, voic
             "- Include items like **Deep breathing**, **Grounding exercise**, **Positive distraction**, or journaling when appropriate.\n\n"
             "### Gentle reminder\n"
             "- 1–2 short bullets reminding them they are not alone and encouraging self‑care.\n\n"
-            "Keep paragraphs short, use bullet lists instead of long blocks of text, and use **bold** for key phrases or section titles."
+            "Keep paragraphs short, use bullet lists instead of long blocks of text, and use **bold** for key phrases or section titles.\n\n"
+            + EXERCISE_CATALOG_TEXT
         )
     )
 

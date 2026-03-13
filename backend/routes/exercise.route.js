@@ -267,5 +267,48 @@ router.post("/:exerciseId/usage", authenticateUser, async (req, res) => {
   }
 });
 
+// Simple usage summary per user
+router.get("/usage/summary/me", authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const pipeline = [
+      { $match: { userId, status: "completed" } },
+      {
+        $group: {
+          _id: "$exerciseId",
+          completedCount: { $sum: 1 },
+          lastCompletedAt: { $max: "$completedAt" },
+        },
+      },
+      {
+        $lookup: {
+          from: "exercises",
+          localField: "_id",
+          foreignField: "exerciseId",
+          as: "exercise",
+        },
+      },
+      { $unwind: "$exercise" },
+      {
+        $project: {
+          exerciseId: "$_id",
+          _id: 0,
+          completedCount: 1,
+          lastCompletedAt: 1,
+          name: "$exercise.name",
+          type: "$exercise.type",
+          difficulty: "$exercise.difficulty",
+        },
+      },
+      { $sort: { completedCount: -1 } },
+    ];
+
+    const summary = await ExerciseUsage.aggregate(pipeline);
+    res.status(200).json(summary);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
 export default router;
 

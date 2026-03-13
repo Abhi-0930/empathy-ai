@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Flame, Clock, Play, CheckCircle2, Mic } from "lucide-react";
+import Confetti from "react-confetti";
 import "./GuidedExercises.css";
 
 const GuidedExercises = () => {
@@ -15,6 +16,8 @@ const GuidedExercises = () => {
   const [countdown, setCountdown] = useState(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [groundingNotes, setGroundingNotes] = useState({});
+  const [isGroundingListening, setIsGroundingListening] = useState(false);
+  const [isExerciseCompleted, setIsExerciseCompleted] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -50,6 +53,7 @@ const GuidedExercises = () => {
     setActiveId(exercise.exerciseId);
     setActiveExercise(exercise);
     setStepIndex(0);
+    setIsExerciseCompleted(false);
 
     // Track start for analytics
     const token = localStorage.getItem("token");
@@ -104,6 +108,9 @@ const GuidedExercises = () => {
     recognition.lang = "en-US";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
+    recognition.onstart = () => {
+      setIsGroundingListening(true);
+    };
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       setGroundingNotes((prev) => {
@@ -115,6 +122,12 @@ const GuidedExercises = () => {
             : transcript,
         };
       });
+    };
+    recognition.onerror = () => {
+      setIsGroundingListening(false);
+    };
+    recognition.onend = () => {
+      setIsGroundingListening(false);
     };
     recognition.start();
   };
@@ -137,6 +150,14 @@ const GuidedExercises = () => {
     }
     setIsTimerRunning(false);
   }, [activeExercise, stepIndex]);
+
+  useEffect(() => {
+    if (!isExerciseCompleted) return;
+    const timeoutId = setTimeout(() => {
+      setIsExerciseCompleted(false);
+    }, 3000);
+    return () => clearTimeout(timeoutId);
+  }, [isExerciseCompleted]);
 
   useEffect(() => {
     if (!isTimerRunning || countdown == null) return;
@@ -163,6 +184,7 @@ const GuidedExercises = () => {
     } else {
       // finished
       setStepIndex(stepIndex);
+      setIsExerciseCompleted(true);
       const token = localStorage.getItem("token");
       if (token) {
         fetch(`/api/exercises/${activeExercise.exerciseId}/usage`, {
@@ -259,7 +281,7 @@ const GuidedExercises = () => {
                       </div>
                     </div>
 
-                    {currentStep && (
+                    {currentStep && !isExerciseCompleted && (
                       <div className="guided-step-card">
                         <div className="guided-step-index">
                           Step {stepIndex + 1} of{" "}
@@ -304,7 +326,9 @@ const GuidedExercises = () => {
                               />
                               <button
                                 type="button"
-                                className="guided-mic-btn"
+                                className={`guided-mic-btn ${
+                                  isGroundingListening ? "listening" : ""
+                                }`}
                                 onClick={handleGroundingDictate}
                               >
                                 <Mic size={16} />
@@ -315,52 +339,75 @@ const GuidedExercises = () => {
                       </div>
                     )}
 
-                    <div className="guided-step-footer">
-                      <div className="guided-step-progress">
-                        {activeExercise.steps.map((step, i) => (
-                          <div
-                            key={i}
-                            className={
-                              i < stepIndex
-                                ? "guided-step-pill completed"
-                                : i === stepIndex
-                                ? "guided-step-pill active"
-                                : "guided-step-pill"
-                            }
-                          >
-                            <span className="guided-step-pill-index">
-                              {i + 1}
-                            </span>
-                            <span className="guided-step-pill-title">
-                              {step.title}
-                            </span>
-                          </div>
-                        ))}
+                    {!isExerciseCompleted && (
+                      <div className="guided-step-footer">
+                        <div className="guided-step-progress">
+                          {activeExercise.steps.map((step, i) => (
+                            <div
+                              key={i}
+                              className={
+                                i < stepIndex
+                                  ? "guided-step-pill completed"
+                                  : i === stepIndex
+                                  ? "guided-step-pill active"
+                                  : "guided-step-pill"
+                              }
+                            >
+                              <span className="guided-step-pill-index">
+                                {i + 1}
+                              </span>
+                              <span className="guided-step-pill-title">
+                                {step.title}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          className="guided-next-btn"
+                          onClick={handleNextStep}
+                        >
+                          {stepIndex < (activeExercise.steps?.length || 0) - 1 ? (
+                            <>
+                              <Play size={16} />
+                              <span>Next step</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 size={16} />
+                              <span>Finish exercise</span>
+                            </>
+                          )}
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        className="guided-next-btn"
-                        onClick={handleNextStep}
-                      >
-                        {stepIndex < (activeExercise.steps?.length || 0) - 1 ? (
-                          <>
-                            <Play size={16} />
-                            <span>Next step</span>
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 size={16} />
-                            <span>Finish exercise</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
+                    )}
                   </div>
                 )}
               </section>
             </div>
           )}
         </main>
+
+        {isExerciseCompleted && (
+          <div className="guided-complete-overlay">
+            <div className="guided-complete-confetti-wrap" aria-hidden="true">
+              <Confetti
+                numberOfPieces={140}
+                recycle={false}
+                gravity={1.25}
+                initialVelocityY={22}
+                wind={0}
+              />
+            </div>
+            <div className="guided-complete-modal">
+              <h2 className="guided-complete-title">Hurray, you finished this exercise!</h2>
+              <p className="guided-complete-text">
+                Take a slow, deep breath and notice any small shift in how you feel.
+                Moments like this are quiet wins for your mind.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
