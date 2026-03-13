@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Flame, Clock, Play, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Flame, Clock, Play, CheckCircle2, Mic } from "lucide-react";
 import "./GuidedExercises.css";
 
 const GuidedExercises = () => {
@@ -12,6 +12,9 @@ const GuidedExercises = () => {
   const [stepIndex, setStepIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [countdown, setCountdown] = useState(null);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [groundingNotes, setGroundingNotes] = useState({});
 
   useEffect(() => {
     const load = async () => {
@@ -71,6 +74,87 @@ const GuidedExercises = () => {
           ((stepIndex + 1) / activeExercise.steps.length) * 100
         )
       : 0;
+
+  const currentGroundingKey =
+    activeExercise && activeExercise.exerciseId === "grounding-5-senses"
+      ? `${activeExercise.exerciseId}-${stepIndex}`
+      : null;
+
+  const currentGroundingNote = currentGroundingKey
+    ? groundingNotes[currentGroundingKey] || ""
+    : "";
+
+  const handleGroundingChange = (value) => {
+    if (!currentGroundingKey) return;
+    setGroundingNotes((prev) => ({
+      ...prev,
+      [currentGroundingKey]: value,
+    }));
+  };
+
+  const handleGroundingDictate = () => {
+    if (!currentGroundingKey) return;
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setGroundingNotes((prev) => {
+        const existing = prev[currentGroundingKey] || "";
+        return {
+          ...prev,
+          [currentGroundingKey]: existing
+            ? `${existing} ${transcript}`
+            : transcript,
+        };
+      });
+    };
+    recognition.start();
+  };
+
+  useEffect(() => {
+    // Reset timer when exercise/step changes
+    if (!activeExercise) {
+      setCountdown(null);
+      setIsTimerRunning(false);
+      return;
+    }
+    const step =
+      activeExercise.steps && activeExercise.steps[stepIndex]
+        ? activeExercise.steps[stepIndex]
+        : null;
+    if (step && typeof step.durationSeconds === "number") {
+      setCountdown(step.durationSeconds);
+    } else {
+      setCountdown(null);
+    }
+    setIsTimerRunning(false);
+  }, [activeExercise, stepIndex]);
+
+  useEffect(() => {
+    if (!isTimerRunning || countdown == null) return;
+    if (countdown <= 0) {
+      setIsTimerRunning(false);
+      return;
+    }
+    const id = setTimeout(
+      () => setCountdown((c) => (c > 0 ? c - 1 : 0)),
+      1000
+    );
+    return () => clearTimeout(id);
+  }, [isTimerRunning, countdown]);
+
+  const handleToggleTimer = () => {
+    if (countdown == null) return;
+    setIsTimerRunning((prev) => !prev);
+  };
 
   const handleNextStep = async () => {
     if (!activeExercise) return;
@@ -181,6 +265,22 @@ const GuidedExercises = () => {
                           Step {stepIndex + 1} of{" "}
                           {activeExercise.steps.length}
                         </div>
+                        {typeof currentStep.durationSeconds === "number" && (
+                          <div className="guided-timer">
+                            <div className="guided-timer-circle">
+                              <span>
+                                {countdown ?? currentStep.durationSeconds}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              className="guided-timer-btn"
+                              onClick={handleToggleTimer}
+                            >
+                              {isTimerRunning ? "Pause" : "Start"}
+                            </button>
+                          </div>
+                        )}
                         <div className="guided-step-progress-bar">
                           <div
                             className="guided-step-progress-bar-fill"
@@ -189,6 +289,29 @@ const GuidedExercises = () => {
                         </div>
                         <h3>{currentStep.title}</h3>
                         <p>{currentStep.description}</p>
+                        {activeExercise.exerciseId === "grounding-5-senses" && (
+                          <div className="guided-grounding-input">
+                            <label>
+                              Write or speak what you notice for this step:
+                            </label>
+                            <div className="guided-grounding-row">
+                              <textarea
+                                value={currentGroundingNote}
+                                onChange={(e) =>
+                                  handleGroundingChange(e.target.value)
+                                }
+                                placeholder="Type a few words…"
+                              />
+                              <button
+                                type="button"
+                                className="guided-mic-btn"
+                                onClick={handleGroundingDictate}
+                              >
+                                <Mic size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 

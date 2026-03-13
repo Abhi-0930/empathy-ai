@@ -147,6 +147,20 @@ def determine_dominant_emotion(text_sentiment, voice_emotion, face_emotion):
     return voice_emotion or text_sentiment or face_emotion
 
 
+EXERCISE_CATALOG_TEXT = (
+    "Your app includes a Guided Exercises section with these reusable exercises:\n"
+    "- `breathing-box-1` – **Box Breathing (4x4)** for calming anxiety.\n"
+    "- `grounding-5-senses` – **5‑Senses Grounding** for feeling present and reducing overwhelm.\n"
+    "- `relaxation-body-scan` – **Short Body Scan** for releasing physical tension.\n"
+    "- `mindfulness-gratitude-3` – **3‑Point Gratitude Check‑In** for low mood or self‑criticism.\n"
+    "- `visualisation-safe-place` – **Safe Place Visualisation** for safety and winding down.\n"
+    "- `micro-reset-posture` – **1‑Minute Posture Reset** for quick micro‑breaks.\n\n"
+    "When appropriate, you may suggest one or two of these by name and id in the **Therapy suggestions** section, "
+    "for example: \"Try the guided exercise `breathing-box-1` – Box Breathing (4x4) in the exercises panel.\" "
+    "Only suggest exercises that genuinely fit the user's situation."
+)
+
+
 def _format_history_for_prompt(chat_history, max_turns: int):
     """
     Convert stored chat_history to LangChain messages, keeping only the last max_turns turns.
@@ -360,7 +374,8 @@ def _generate_conversational_response(user_id, session_id, user_text, formatted_
             "Reply in a natural, conversational way. Keep responses concise. Use **bold** or markdown only when it helps.\n\n"
             "**If the user asks about mental health, feelings, stress, or how they're doing:** Respond with empathy and support. Match their tone—brief for brief messages, more depth when they open up. No fixed sections or long templates.\n\n"
             "**If the user asks about something off-topic (e.g. coding, tech, general knowledge, homework, other topics):** Do not answer the question in full. Briefly acknowledge it in one sentence, then gently redirect. For example: \"I'm here to support you with how you're feeling and your well-being—I'm not the best for tech or coding questions. How have you been feeling lately, or is there something on your mind?\" Keep it kind and short, then invite them to share what's on their mind emotionally or mentally.\n\n"
-            "Stay in character as a mental health companion. Do not provide detailed answers to non–mental-health topics."
+            "Stay in character as a mental health companion. Do not provide detailed answers to non–mental-health topics.\n\n"
+            + EXERCISE_CATALOG_TEXT
         )
     )
     user_memory = get_or_update_user_memory(user_id)
