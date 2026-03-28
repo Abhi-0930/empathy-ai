@@ -376,6 +376,12 @@ def metrics():
 
 if __name__ == "__main__":
     # Use 5001 to avoid Windows port 5000 reservation / permission issues
-    app.run(debug=True, port=5001)
+    debug_mode = os.getenv("FLASK_DEBUG", "1").lower() in ("1", "true", "yes")
+    use_reloader = os.getenv("FLASK_USE_RELOADER", "0").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    app.run(debug=debug_mode, use_reloader=use_reloader, port=5001)
 
     

@@ -11,7 +11,7 @@ from voice_emotion import analyze_voice_emotion
 
 from langchain_openai.chat_models.base import ChatOpenAI
 from langchain.schema import SystemMessage, HumanMessage
-from dotenv import load_dotenv
+from dotenv import load_dotenv, dotenv_values
 
 from langchain.memory import ConversationBufferMemory
 
@@ -21,9 +21,16 @@ from bson import ObjectId
 
 load_dotenv()
 
-MONGO_URI = os.getenv("MONGO_URI")
+_backend_env_path = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "backend", ".env"
+)
+_backend_env = dotenv_values(_backend_env_path) if os.path.exists(_backend_env_path) else {}
+
+MONGO_URI = os.getenv("MONGO_URI") or _backend_env.get("MONGO_URI")
 if not MONGO_URI:
-    raise RuntimeError("MONGO_URI is required in environment variables")
+    raise RuntimeError(
+        "MONGO_URI is required. Set it in api/.env or backend/.env"
+    )
 
 client = MongoClient(
     MONGO_URI,
@@ -114,8 +121,13 @@ llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.8)
 # Encryption for chat content-at-rest.
 # Set either CHAT_ENCRYPTION_KEY (Fernet key) or CHAT_ENCRYPTION_PASSPHRASE.
 _fernet = None
-_raw_key = os.getenv("CHAT_ENCRYPTION_KEY")
-_passphrase = os.getenv("CHAT_ENCRYPTION_PASSPHRASE")
+_raw_key = os.getenv("CHAT_ENCRYPTION_KEY") or _backend_env.get("CHAT_ENCRYPTION_KEY")
+_passphrase = (
+    os.getenv("CHAT_ENCRYPTION_PASSPHRASE")
+    or _backend_env.get("CHAT_ENCRYPTION_PASSPHRASE")
+    or os.getenv("JWT_SECRET")
+    or _backend_env.get("JWT_SECRET")
+)
 
 if _raw_key:
     _fernet = Fernet(_raw_key.encode("utf-8"))
@@ -125,7 +137,7 @@ elif _passphrase:
 
 if _fernet is None:
     raise RuntimeError(
-        "CHAT_ENCRYPTION_KEY or CHAT_ENCRYPTION_PASSPHRASE must be configured"
+        "CHAT_ENCRYPTION_KEY or CHAT_ENCRYPTION_PASSPHRASE must be configured in api/.env or backend/.env"
     )
 
 
