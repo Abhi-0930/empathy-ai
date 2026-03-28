@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import axios from "axios";
 import { Camera, Mic } from "lucide-react";
 import "../Chatbot/Chatbot.css";
 
@@ -14,22 +13,14 @@ const SharedChat = () => {
   useEffect(() => {
     const loadSharedChat = async () => {
       try {
-        // Resolve shareId to session info
-        const metaRes = await fetch(
-          `/api/chats/shared/${shareId}`
-        );
-        if (!metaRes.ok) {
+        const sharedRes = await fetch(`/api/chats/shared/${shareId}/history`);
+        if (!sharedRes.ok) {
           throw new Error("Shared chat not found or expired");
         }
-        const metaData = await metaRes.json();
+        const metaData = await sharedRes.json();
         setMeta(metaData);
 
-        // Fetch full history from Python API (public session history)
-        const histRes = await axios.get(
-          `http://127.0.0.1:5001/sessions/${metaData.sessionId}/history`
-        );
-
-        const history = histRes.data.messages || [];
+        const history = metaData.messages || [];
         const flattened = [];
         history.forEach((entry, index) => {
           const ts = entry.timestamp ? new Date(entry.timestamp) : new Date();
@@ -117,6 +108,11 @@ const SharedChat = () => {
         <div className="chat-header">
           <div className="chat-info">
             <h3>{meta?.title || "Shared Session"}</h3>
+            {meta?.expiresAt ? (
+              <p className="chat-shared-expiry">
+                Link expires on {new Date(meta.expiresAt).toLocaleString()}
+              </p>
+            ) : null}
           </div>
         </div>
 

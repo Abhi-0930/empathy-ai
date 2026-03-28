@@ -2,6 +2,8 @@ import whisper
 import os
 from pydub import AudioSegment
 
+whisper_model = None
+
 def transcribe_voice(voice_file):
     # Convert to WAV if necessary
     converted_file = voice_file  # Default to original file
@@ -11,12 +13,14 @@ def transcribe_voice(voice_file):
         audio = AudioSegment.from_file(voice_file)
         audio.export(converted_file, format="wav")
 
-    # Load Whisper model
-    model = whisper.load_model("base")  # Use "small", "medium", or "large" for better accuracy
+    # Lazy-load Whisper model once
+    global whisper_model
+    if whisper_model is None:
+        whisper_model = whisper.load_model("base")
 
     try:
         # Transcribe the audio
-        result = model.transcribe(converted_file)
+        result = whisper_model.transcribe(converted_file)
         return result["text"]
     except Exception as e:
         return f"Error in transcription: {str(e)}"

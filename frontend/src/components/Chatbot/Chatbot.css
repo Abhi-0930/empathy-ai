@@ -481,6 +481,12 @@
   transform: scale(1.02);
 }
 
+.chat-shared-expiry {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
 .input-container-no-session {
   display: flex;
   align-items: center;
@@ -504,6 +510,34 @@
   display: flex;
   flex-direction: column;
   animation: messageAppear 0.3s ease-out;
+}
+
+.exercise-suggestion-row {
+  margin-top: 0.65rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.exercise-suggestion-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  background: rgba(79, 70, 229, 0.12);
+  color: #312e81;
+  cursor: pointer;
+  transition: transform 0.15s, background-color 0.15s;
+}
+
+.exercise-suggestion-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(79, 70, 229, 0.18);
+}
+
+.share-expiry-text {
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
 }
 
 @keyframes messageAppear {

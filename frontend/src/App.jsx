@@ -5,6 +5,7 @@ import Chatbot from "./components/Chatbot/Chatbot.jsx";
 import SharedChat from "./components/SharedChat/SharedChat.jsx";
 import GuidedExercises from "./components/GuidedExercises/GuidedExercises.jsx";
 import MoodDashboard from "./components/MoodDashboard/MoodDashboard.jsx";
+import Insights from "./components/Insights/Insights.jsx";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
       <Route path="/shared/:shareId" element={<SharedChat />} />
       <Route path="/guided-exercises" element={<GuidedExercises />} />
       <Route path="/mood-dashboard" element={<MoodDashboard />} />
+      <Route path="/insights" element={<Insights />} />
     </Routes>
   );
 }

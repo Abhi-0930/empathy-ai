@@ -25,6 +25,7 @@ import {
   Activity,
   Flame,
   Download,
+  ChartColumn,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -32,6 +33,29 @@ import "./Chatbot.css";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import logoImage from "../../assets/logo.jpg";
+
+const KNOWN_EXERCISE_IDS = [
+  "breathing-box-1",
+  "grounding-5-senses",
+  "relaxation-body-scan",
+  "mindfulness-gratitude-3",
+  "visualisation-safe-place",
+  "micro-reset-posture",
+];
+
+const escapeRegExp = (value) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const extractSuggestedExerciseIds = (text) => {
+  if (!text || typeof text !== "string") {
+    return [];
+  }
+
+  return KNOWN_EXERCISE_IDS.filter((id) => {
+    const pattern = new RegExp(`\\b${escapeRegExp(id)}\\b`, "i");
+    return pattern.test(text);
+  });
+};
 
 const MentalHealthChatbot = () => {
   // State management
@@ -60,7 +84,12 @@ const MentalHealthChatbot = () => {
   const [renameModal, setRenameModal] = useState({ open: false, chatId: null, currentTitle: "" });
   const [renameInput, setRenameInput] = useState("");
   const [deleteModal, setDeleteModal] = useState({ open: false, chatId: null });
-  const [shareModal, setShareModal] = useState({ open: false, chatId: null, url: null });
+  const [shareModal, setShareModal] = useState({
+    open: false,
+    chatId: null,
+    url: null,
+    expiresAt: null,
+  });
   const [copiedShare, setCopiedShare] = useState(false);
 
   const getNextMessageId = () => {
@@ -366,7 +395,12 @@ const MentalHealthChatbot = () => {
         return;
       }
       const data = await res.json();
-      setShareModal({ open: true, chatId, url: data.url });
+      setShareModal({
+        open: true,
+        chatId,
+        url: data.url,
+        expiresAt: data.expiresAt || null,
+      });
       setCopiedShare(false);
     } catch (error) {
       console.error("Error creating share link:", error);
@@ -409,6 +443,42 @@ const MentalHealthChatbot = () => {
       setCopiedShare(true);
       setTimeout(() => setCopiedShare(false), 2000);
     }
+  };
+
+  const handleRevokeShare = async () => {
+    if (!shareModal.chatId) {
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`/api/chats/${shareModal.chatId}/share`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        showNotification("Failed to revoke share link.", "error");
+        return;
+      }
+
+      showNotification("Share link revoked.", "info");
+      setShareModal({
+        open: false,
+        chatId: null,
+        url: null,
+        expiresAt: null,
+      });
+    } catch (error) {
+      console.error("Error revoking share link:", error);
+      showNotification("Error revoking share link.", "error");
+    }
+  };
+
+  const handleStartExercise = (exerciseId) => {
+    navigate(`/guided-exercises?id=${encodeURIComponent(exerciseId)}`);
   };
 
   const openRenameModal = (chatId) => {
@@ -870,6 +940,14 @@ const MentalHealthChatbot = () => {
             <Flame size={16} />
             <span>Guided exercises</span>
           </button>
+          <button
+            type="button"
+            className="mood-dashboard-btn"
+            onClick={() => navigate("/insights")}
+          >
+            <ChartColumn size={16} />
+            <span>Insights</span>
+          </button>
         </div>
 
         <div className="search-container">
@@ -1053,11 +1131,33 @@ const MentalHealthChatbot = () => {
               }`}
             >
               <div className="message-content">
-                {message.sender === "bot" ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {message.text}
-                  </ReactMarkdown>
-                ) : message.mode === "video" ? (
+                {message.sender === "bot" ? (() => {
+                  const suggestedExerciseIds = extractSuggestedExerciseIds(
+                    message.text
+                  );
+
+                  return (
+                    <>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {message.text}
+                      </ReactMarkdown>
+                      {suggestedExerciseIds.length > 0 ? (
+                        <div className="exercise-suggestion-row">
+                          {suggestedExerciseIds.map((exerciseId) => (
+                            <button
+                              key={exerciseId}
+                              type="button"
+                              className="exercise-suggestion-btn"
+                              onClick={() => handleStartExercise(exerciseId)}
+                            >
+                              Start {exerciseId}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </>
+                  );
+                })() : message.mode === "video" ? (
                   <div className="message-media-label">
                     <Camera size={16} />
                     <span>Video emotion analysis</span>
@@ -1294,10 +1394,25 @@ const MentalHealthChatbot = () => {
 
       {/* Share modal */}
       {shareModal.open && shareModal.url && (
-        <div className="modal-overlay" onClick={() => setShareModal({ open: false, chatId: null, url: null })}>
+        <div
+          className="modal-overlay"
+          onClick={() =>
+            setShareModal({
+              open: false,
+              chatId: null,
+              url: null,
+              expiresAt: null,
+            })
+          }
+        >
           <div className="modal-content share-modal" onClick={(e) => e.stopPropagation()}>
             <h3 className="modal-title">Share chat</h3>
             <p className="modal-text">Anyone with this link can view the conversation.</p>
+            {shareModal.expiresAt ? (
+              <p className="modal-text share-expiry-text">
+                This link expires on {new Date(shareModal.expiresAt).toLocaleString()}.
+              </p>
+            ) : null}
             <div className="share-link-row">
               <input type="text" className="modal-input share-link-input" readOnly value={shareModal.url} />
               <button type="button" className="modal-btn primary copy-btn" onClick={copyShareLink}>
@@ -1305,7 +1420,24 @@ const MentalHealthChatbot = () => {
                 <span>{copiedShare ? "Copied" : "Copy"}</span>
               </button>
             </div>
-            <button className="modal-btn secondary full-width" onClick={() => setShareModal({ open: false, chatId: null, url: null })}>Done</button>
+            <div className="modal-actions">
+              <button className="modal-btn destructive" onClick={handleRevokeShare}>
+                Revoke link
+              </button>
+              <button
+                className="modal-btn secondary"
+                onClick={() =>
+                  setShareModal({
+                    open: false,
+                    chatId: null,
+                    url: null,
+                    expiresAt: null,
+                  })
+                }
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

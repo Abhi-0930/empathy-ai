@@ -5,6 +5,22 @@ import UsersChat from "../models/user.chat.model.js";
 import PDFDocument from "pdfkit";
 
 const router = express.Router();
+const DEFAULT_SHARE_EXPIRY_DAYS = 30;
+
+const resolveExpiryDays = (value) => {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0 && numeric <= 365) {
+    return Math.floor(numeric);
+  }
+  return DEFAULT_SHARE_EXPIRY_DAYS;
+};
+
+const isShareExpired = (chat) => {
+  if (!chat || !chat.shareExpiresAt) {
+    return false;
+  }
+  return new Date(chat.shareExpiresAt).getTime() < Date.now();
+};
 
 // Get all chat sessions for the authenticated user
 router.get("/", authenticateUser, async (req, res) => {
@@ -84,6 +100,10 @@ router.post("/:id/share", authenticateUser, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
+    const expiresInDays = resolveExpiryDays(req.body?.expiresInDays);
+    const shareExpiresAt = new Date(
+      Date.now() + expiresInDays * 24 * 60 * 60 * 1000
+    );
 
     const shareId = crypto.randomBytes(16).toString("hex");
 
@@ -91,7 +111,7 @@ router.post("/:id/share", authenticateUser, async (req, res) => {
       { _id: id, userId },
       {
         shareId,
-        shareExpiresAt: null, // could set expiry in future
+        shareExpiresAt,
       },
       { new: true }
     );
@@ -101,7 +121,12 @@ router.post("/:id/share", authenticateUser, async (req, res) => {
     }
 
     const url = `${process.env.CLIENT_URL || "http://localhost:5173"}/shared/${shareId}`;
-    res.status(200).json({ shareId, url });
+    res.status(200).json({
+      shareId,
+      url,
+      expiresAt: shareExpiresAt,
+      expiresInDays,
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -138,7 +163,7 @@ router.get("/shared/:shareId", async (req, res) => {
     const { shareId } = req.params;
 
     const chat = await UsersChat.findOne({ shareId });
-    if (!chat) {
+    if (!chat || isShareExpired(chat)) {
       return res.status(404).json({ message: "Shared chat not found" });
     }
 
@@ -147,6 +172,47 @@ router.get("/shared/:shareId", async (req, res) => {
       title: chat.title,
       createdAt: chat.createdAt,
       updatedAt: chat.updatedAt,
+      expiresAt: chat.shareExpiresAt,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// Public endpoint: resolve shareId and return read-only conversation history
+router.get("/shared/:shareId/history", async (req, res) => {
+  try {
+    const { shareId } = req.params;
+
+    const chat = await UsersChat.findOne({ shareId });
+    if (!chat || isShareExpired(chat)) {
+      return res.status(404).json({ message: "Shared chat not found" });
+    }
+
+    const pythonBase = process.env.PYTHON_API_URL || "http://127.0.0.1:5001";
+    const ownerId = chat.userId?.toString();
+
+    const histRes = await fetch(
+      `${pythonBase}/sessions/${chat._id.toString()}/history?user_id=${encodeURIComponent(
+        ownerId
+      )}`
+    );
+
+    if (!histRes.ok) {
+      const details = await histRes.text();
+      return res.status(502).json({
+        message: "Failed to fetch shared history",
+        details,
+      });
+    }
+
+    const history = await histRes.json();
+
+    res.status(200).json({
+      sessionId: chat._id.toString(),
+      title: chat.title,
+      expiresAt: chat.shareExpiresAt,
+      messages: history.messages || [],
     });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });

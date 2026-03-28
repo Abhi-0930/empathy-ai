@@ -2,7 +2,7 @@ from datetime import datetime
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
-from chatbot_response import _encrypt_text, _decrypt_text, chat_collection
+from chatbot_response import _encrypt_text, _decrypt_text, _hash_text, chat_collection
 
 
 def _is_encrypted(value: str) -> bool:
@@ -46,6 +46,18 @@ def migrate_all_users():
                 e["ai_response"] = _encrypt_text(ar)
                 changed = True
                 updated_entries += 1
+
+            plain_um = _decrypt_text(e.get("user_message", ""))
+            plain_ar = _decrypt_text(e.get("ai_response", ""))
+            expected_um_hash = _hash_text(plain_um or "")
+            expected_ar_hash = _hash_text(plain_ar or "")
+
+            if e.get("user_message_hash") != expected_um_hash:
+                e["user_message_hash"] = expected_um_hash
+                changed = True
+            if e.get("ai_response_hash") != expected_ar_hash:
+                e["ai_response_hash"] = expected_ar_hash
+                changed = True
 
             new_history.append(e)
 

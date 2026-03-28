@@ -1,4 +1,9 @@
 import os
+import re
+import base64
+import hashlib
+from collections import Counter
+from datetime import datetime, timedelta
 
 from sentiment_analysis import analyze_sentiment
 from face_emotion import analyze_facial_emotion
@@ -7,23 +12,31 @@ from voice_emotion import analyze_voice_emotion
 from langchain_openai.chat_models.base import ChatOpenAI
 from langchain.schema import SystemMessage, HumanMessage
 from dotenv import load_dotenv
-import os
 
 from langchain.memory import ConversationBufferMemory
 
 from pymongo import MongoClient
-from datetime import datetime, timedelta
 from cryptography.fernet import Fernet, InvalidToken
-import base64
-import hashlib
+from bson import ObjectId
 
-# TODO: move this URI to environment variables
-MONGO_URI = "mongodb+srv://abhishekj3094_db_user:Abhi._.3094@cluster0.qigdlpm.mongodb.net/userschats"
-client = MongoClient(MONGO_URI)
+load_dotenv()
+
+MONGO_URI = os.getenv("MONGO_URI")
+if not MONGO_URI:
+    raise RuntimeError("MONGO_URI is required in environment variables")
+
+client = MongoClient(
+    MONGO_URI,
+    maxPoolSize=int(os.getenv("MONGO_MAX_POOL_SIZE", "20")),
+    minPoolSize=int(os.getenv("MONGO_MIN_POOL_SIZE", "2")),
+    serverSelectionTimeoutMS=int(os.getenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "5000")),
+)
 db = client["visionava_users"]
 chat_collection = db["users_chat"]
 session_summary_collection = db["session_summaries"]
 user_memory_collection = db["user_memory"]
+exercise_usage_collection = db["exerciseusages"]
+exercise_collection = db["exercises"]
 
 # Summarization + memory tuning
 MAX_RAW_TURNS_IN_PROMPT = 12  # last N user+AI turns included verbatim
@@ -36,10 +49,15 @@ SUMMARY_MAX_CHARS = 900
 
 def store_chat_in_db(user_id, session_id, user_text, ai_response, voice_emotion, dominant_emotion):
     """Store user and AI messages in the database, grouped by session."""
+    user_text = user_text or ""
+    ai_response = ai_response or ""
+
     chat_entry = {
         "timestamp": datetime.utcnow(),
         "user_message": _encrypt_text(user_text),
         "ai_response": _encrypt_text(ai_response),
+        "user_message_hash": _hash_text(user_text),
+        "ai_response_hash": _hash_text(ai_response),
         "voice_emotion": voice_emotion,
         "dominant_emotion": dominant_emotion,
     }
@@ -89,15 +107,12 @@ def get_chat_history_from_db(user_id, session_id):
     # chat_history = chat_collection.find({"user_id": user_id}).sort("timestamp", 1)
     # return [{"user": entry["user_message"], "ai": entry["ai_response"]} for entry in chat_history]
 
-load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 # Slightly higher temperature for more varied, less repetitive responses
 llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.8)
 
-# Encryption for chat content-at-rest (optional).
-# Set either:
-# - CHAT_ENCRYPTION_KEY (Fernet key), OR
-# - CHAT_ENCRYPTION_PASSPHRASE (any string; derived deterministically).
+# Encryption for chat content-at-rest.
+# Set either CHAT_ENCRYPTION_KEY (Fernet key) or CHAT_ENCRYPTION_PASSPHRASE.
 _fernet = None
 _raw_key = os.getenv("CHAT_ENCRYPTION_KEY")
 _passphrase = os.getenv("CHAT_ENCRYPTION_PASSPHRASE")
@@ -107,6 +122,17 @@ if _raw_key:
 elif _passphrase:
     digest = hashlib.sha256(_passphrase.encode("utf-8")).digest()
     _fernet = Fernet(base64.urlsafe_b64encode(digest))
+
+if _fernet is None:
+    raise RuntimeError(
+        "CHAT_ENCRYPTION_KEY or CHAT_ENCRYPTION_PASSPHRASE must be configured"
+    )
+
+
+def _hash_text(value: str):
+    if value is None:
+        return None
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def _encrypt_text(value: str):
@@ -366,6 +392,236 @@ def get_mood_trends_for_user(user_id: str, days: int = 7):
     return {"buckets": buckets, "totals": totals}
 
 
+def _extract_recurring_topics(turns, top_n: int = 6):
+    """
+    Lightweight keyword extraction from recent user messages.
+    """
+    stop_words = {
+        "the",
+        "and",
+        "that",
+        "this",
+        "with",
+        "from",
+        "have",
+        "been",
+        "just",
+        "your",
+        "about",
+        "they",
+        "them",
+        "then",
+        "when",
+        "where",
+        "what",
+        "would",
+        "could",
+        "should",
+        "feel",
+        "feels",
+        "feeling",
+        "today",
+        "really",
+        "very",
+        "more",
+        "some",
+        "into",
+        "than",
+        "because",
+        "while",
+        "after",
+        "before",
+        "there",
+        "their",
+        "cant",
+        "dont",
+        "im",
+        "ive",
+    }
+
+    counter = Counter()
+    for entry in turns:
+        text = (entry.get("user_message") or "").lower()
+        tokens = re.findall(r"[a-zA-Z]{4,}", text)
+        for token in tokens:
+            if token in stop_words:
+                continue
+            counter[token] += 1
+
+    recurring = [word for word, count in counter.most_common(top_n) if count >= 2]
+    return recurring
+
+
+def get_personalization_summary_for_user(user_id: str):
+    """
+    Build a compact personalization snapshot suitable for UI and prompt injection.
+    """
+    if not user_id:
+        return {
+            "user_id": user_id,
+            "baseline": {},
+            "recurring_topics": [],
+            "summary": "",
+        }
+
+    long_range = get_mood_trends_for_user(user_id=user_id, days=30)
+    totals = long_range.get("totals", {})
+    total_entries = sum(totals.values())
+
+    primary_emotion = None
+    emotion_distribution = []
+    if totals:
+        sorted_totals = sorted(totals.items(), key=lambda kv: kv[1], reverse=True)
+        primary_emotion = sorted_totals[0][0]
+        for emotion, count in sorted_totals:
+            pct = round((count / total_entries) * 100, 1) if total_entries else 0
+            emotion_distribution.append(
+                {
+                    "emotion": emotion,
+                    "count": count,
+                    "percentage": pct,
+                }
+            )
+
+    recent_turns = _get_recent_turns_across_sessions(user_id, USER_MEMORY_MAX_TURNS)
+    recurring_topics = _extract_recurring_topics(recent_turns)
+    summary_text = get_or_update_user_memory(user_id)
+
+    sentiment_score_map = {
+        "Positive": 1,
+        "Neutral": 0,
+        "Negative": -1,
+    }
+    weighted_score = 0
+    for emotion, count in totals.items():
+        weighted_score += sentiment_score_map.get(emotion, 0) * count
+    average_sentiment_score = (
+        round(weighted_score / total_entries, 3) if total_entries > 0 else 0
+    )
+
+    exercise_preferences = []
+    try:
+        oid = ObjectId(user_id)
+        pipeline = [
+            {"$match": {"userId": oid}},
+            {
+                "$group": {
+                    "_id": "$exerciseId",
+                    "started": {
+                        "$sum": {
+                            "$cond": [{"$eq": ["$status", "started"]}, 1, 0]
+                        }
+                    },
+                    "completed": {
+                        "$sum": {
+                            "$cond": [{"$eq": ["$status", "completed"]}, 1, 0]
+                        }
+                    },
+                    "lastCompletedAt": {"$max": "$completedAt"},
+                }
+            },
+            {
+                "$lookup": {
+                    "from": exercise_collection.name,
+                    "localField": "_id",
+                    "foreignField": "exerciseId",
+                    "as": "exercise",
+                }
+            },
+            {
+                "$unwind": {
+                    "path": "$exercise",
+                    "preserveNullAndEmptyArrays": True,
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "exerciseId": "$_id",
+                    "name": "$exercise.name",
+                    "type": "$exercise.type",
+                    "started": 1,
+                    "completed": 1,
+                    "completionRate": {
+                        "$cond": [
+                            {"$gt": [{"$add": ["$started", "$completed"]}, 0]},
+                            {
+                                "$round": [
+                                    {
+                                        "$divide": [
+                                            "$completed",
+                                            {"$add": ["$started", "$completed"]},
+                                        ]
+                                    },
+                                    3,
+                                ]
+                            },
+                            0,
+                        ]
+                    },
+                    "lastCompletedAt": 1,
+                }
+            },
+            {"$sort": {"completed": -1, "completionRate": -1}},
+            {"$limit": 8},
+        ]
+        exercise_preferences = list(exercise_usage_collection.aggregate(pipeline))
+    except Exception:
+        exercise_preferences = []
+
+    return {
+        "user_id": user_id,
+        "baseline": {
+            "window_days": 30,
+            "primary_emotion": primary_emotion,
+            "total_entries": total_entries,
+            "average_sentiment_score": average_sentiment_score,
+            "emotion_distribution": emotion_distribution,
+        },
+        "recurring_topics": recurring_topics,
+        "exercise_preferences": exercise_preferences,
+        "summary": summary_text,
+        "generated_at": datetime.utcnow().isoformat(),
+    }
+
+
+def format_personalization_prompt_block(personalization):
+    """
+    Convert personalization summary into compact prompt guidance.
+    """
+    if not personalization:
+        return ""
+
+    baseline = personalization.get("baseline", {})
+    primary = baseline.get("primary_emotion") or "unknown"
+    avg_score = baseline.get("average_sentiment_score", 0)
+    topics = personalization.get("recurring_topics", [])
+    prefs = personalization.get("exercise_preferences", [])
+    memory = (personalization.get("summary") or "").strip()
+
+    lines = [
+        "### Personalization hints",
+        f"- Frequent emotion pattern: {primary}",
+        f"- Average sentiment score trend: {avg_score} (range -1 to +1)",
+    ]
+
+    if topics:
+        lines.append(f"- Recurring themes: {', '.join(topics[:5])}")
+
+    if prefs:
+        top = prefs[0]
+        exercise_name = top.get("name") or top.get("exerciseId")
+        rate = top.get("completionRate", 0)
+        lines.append(
+            f"- Helpful past strategy: {exercise_name} (completion rate {rate})"
+        )
+
+    if memory:
+        lines.append(f"- Sensitivities and context: {memory[:SUMMARY_MAX_CHARS]}")
+
+    return "\n".join(lines)
+
+
 def _generate_conversational_response(user_id, session_id, user_text, formatted_history):
     """Normal back-and-forth chat for text-only mode (no emotion-analysis structure)."""
     system_message = SystemMessage(
@@ -378,11 +634,15 @@ def _generate_conversational_response(user_id, session_id, user_text, formatted_
             + EXERCISE_CATALOG_TEXT
         )
     )
+    personalization = get_personalization_summary_for_user(user_id)
+    personalization_block = format_personalization_prompt_block(personalization)
     user_memory = get_or_update_user_memory(user_id)
     session_history = get_chat_history_from_db(user_id, session_id)
     session_summary = get_or_update_session_summary(user_id, session_id, session_history)
 
     memory_block = ""
+    if personalization_block:
+        memory_block += f"\n\n{personalization_block}"
     if user_memory:
         memory_block += f"\n\n### Cross-session memory\n{(user_memory[:SUMMARY_MAX_CHARS]).rstrip()}"
     if session_summary:
@@ -424,6 +684,8 @@ def generate_chatbot_response(user_id, session_id, user_text, face_emotion, voic
     chat_history = get_chat_history_from_db(user_id, session_id)
 
     # Summaries / cross-session memory
+    personalization = get_personalization_summary_for_user(user_id)
+    personalization_block = format_personalization_prompt_block(personalization)
     user_memory = get_or_update_user_memory(user_id)
     session_summary = get_or_update_session_summary(user_id, session_id, chat_history)
 
@@ -483,6 +745,8 @@ def generate_chatbot_response(user_id, session_id, user_text, face_emotion, voic
     )
 
     memory_block = ""
+    if personalization_block:
+        memory_block += f"\n\n{personalization_block}"
     if user_memory:
         memory_block += f"\n\n### Cross-session memory\n{(user_memory[:SUMMARY_MAX_CHARS]).rstrip()}"
     if session_summary:

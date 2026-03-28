@@ -4,8 +4,8 @@ import librosa
 import numpy as np
 
 MODEL_NAME = "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim"
-processor = Wav2Vec2Processor.from_pretrained(MODEL_NAME)
-model = Wav2Vec2ForSequenceClassification.from_pretrained(MODEL_NAME)
+processor = None
+model = None
 
 emotion_labels = ["Neutral", "Happy", "Sad", "Angry", "Fearful", "Disgusted", "Surprised"]
 
@@ -14,6 +14,11 @@ def analyze_voice_emotion(audio_path):
     Predicts emotion from voice tone using a Wav2Vec2-based model.
     """
     try:
+        global processor, model
+        if processor is None or model is None:
+            processor = Wav2Vec2Processor.from_pretrained(MODEL_NAME)
+            model = Wav2Vec2ForSequenceClassification.from_pretrained(MODEL_NAME)
+
         speech, sr = librosa.load(audio_path, sr=16000)
         inputs = processor(speech, sampling_rate=16000, return_tensors="pt", padding=True)
 
