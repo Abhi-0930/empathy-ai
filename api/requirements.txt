@@ -19,3 +19,4 @@ cryptography
 SpeechRecognition
 pydub
 openai-whisper
+gunicorn

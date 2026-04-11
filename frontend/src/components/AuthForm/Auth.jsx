@@ -5,6 +5,7 @@ import { FaGoogle } from "react-icons/fa";
 import { GoogleLogin } from "react-google-login"; // Import the GoogleLogin component
 import { Link } from "react-router-dom";
 import { ClipLoader, PulseLoader } from "react-spinners"; // Import spinners
+import { BACKEND_URL } from "../../api.config";
 
 function AuthForm() {
   const [view, setView] = useState("login");
@@ -43,7 +44,7 @@ function AuthForm() {
     if (endpoint === "login") delete requestData.username;
 
     try {
-      const response = await fetch(`/api/auth/${endpoint}`, {
+      const response = await fetch(`${BACKEND_URL}/api/auth/${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestData),
@@ -66,7 +67,7 @@ function AuthForm() {
         setMessageType("success");
         setIsRedirecting(true);
         // Auto-login to get token and then redirect
-        const loginRes = await fetch("/api/auth/login", {
+        const loginRes = await fetch(`${BACKEND_URL}/api/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: formData.email, password: formData.password }),

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Flame, Clock, Play, CheckCircle2, Mic } from "lucide-react";
 import Confetti from "react-confetti";
 import "./GuidedExercises.css";
+import { BACKEND_URL } from "../../api.config";
 
 const GuidedExercises = () => {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ const GuidedExercises = () => {
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch("/api/exercises");
+        const res = await fetch(`${BACKEND_URL}/api/exercises`);
         if (!res.ok) {
           throw new Error("Failed to load exercises");
         }
@@ -58,7 +59,7 @@ const GuidedExercises = () => {
     // Track start for analytics
     const token = localStorage.getItem("token");
     if (token) {
-      fetch(`/api/exercises/${exercise.exerciseId}/usage`, {
+      fetch(`${BACKEND_URL}/api/exercises/${exercise.exerciseId}/usage`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -187,7 +188,7 @@ const GuidedExercises = () => {
       setIsExerciseCompleted(true);
       const token = localStorage.getItem("token");
       if (token) {
-        fetch(`/api/exercises/${activeExercise.exerciseId}/usage`, {
+        fetch(`${BACKEND_URL}/api/exercises/${activeExercise.exerciseId}/usage`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

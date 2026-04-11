@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Activity, Calendar, TrendingUp } from "lucide-react";
 import "./MoodDashboard.css";
+import { BACKEND_URL, PYTHON_API_URL } from "../../api.config";
 
 const rangeOptions = [
   { value: "7d", label: "Last 7 days" },
@@ -31,7 +32,7 @@ const MoodDashboard = () => {
         }
 
         // Fetch user profile to get user_id
-        const profileRes = await fetch("/api/auth/profile", {
+        const profileRes = await fetch(`${BACKEND_URL}/api/auth/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const profileData = await profileRes.json();
@@ -42,7 +43,7 @@ const MoodDashboard = () => {
         setUser(profileData);
 
         const trendsRes = await fetch(
-          `http://127.0.0.1:5001/mood-trends?user_id=${encodeURIComponent(
+          `${PYTHON_API_URL}/mood-trends?user_id=${encodeURIComponent(
             profileData._id
           )}&range=${range}`
         );

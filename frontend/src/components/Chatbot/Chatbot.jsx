@@ -33,6 +33,7 @@ import "./Chatbot.css";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import logoImage from "../../assets/logo.jpg";
+import { BACKEND_URL, PYTHON_API_URL } from "../../api.config";
 
 const KNOWN_EXERCISE_IDS = [
   "breathing-box-1",
@@ -142,7 +143,7 @@ const MentalHealthChatbot = () => {
       }
 
       // Fetch chats
-      const chatsResponse = await fetch("/api/chats", {
+      const chatsResponse = await fetch(`${BACKEND_URL}/api/chats`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const chatsData = await chatsResponse.json();
@@ -222,7 +223,7 @@ const MentalHealthChatbot = () => {
       formData.append("text", textToSend);
 
       const res = await axios.post(
-        "http://127.0.0.1:5001/unified_emotion",
+        `${PYTHON_API_URL}/unified_emotion`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -268,7 +269,7 @@ const MentalHealthChatbot = () => {
       lastMessage: "",
     };
 
-    const response = await fetch("/api/chats", {
+    const response = await fetch(`${BACKEND_URL}/api/chats`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -296,7 +297,7 @@ const MentalHealthChatbot = () => {
       }
       try {
         const res = await axios.get(
-          `http://127.0.0.1:5001/sessions/${activeChat}/history`,
+          `${PYTHON_API_URL}/sessions/${activeChat}/history`,
           {
             params: { user_id: user._id },
           }
@@ -384,7 +385,7 @@ const MentalHealthChatbot = () => {
   const handleShareChat = async (chatId) => {
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`/api/chats/${chatId}/share`, {
+      const res = await fetch(`${BACKEND_URL}/api/chats/${chatId}/share`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -410,7 +411,7 @@ const MentalHealthChatbot = () => {
   const handleExportPdf = async (chatId) => {
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`/api/chats/${chatId}/export/pdf`, {
+      const res = await fetch(`${BACKEND_URL}/api/chats/${chatId}/export/pdf`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -452,7 +453,7 @@ const MentalHealthChatbot = () => {
 
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`/api/chats/${shareModal.chatId}/share`, {
+      const res = await fetch(`${BACKEND_URL}/api/chats/${shareModal.chatId}/share`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -498,7 +499,7 @@ const MentalHealthChatbot = () => {
     }
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`/api/chats/${chatId}`, {
+      const res = await fetch(`${BACKEND_URL}/api/chats/${chatId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -532,7 +533,7 @@ const MentalHealthChatbot = () => {
       return;
     }
     const token = localStorage.getItem("token");
-    const response = await fetch(`/api/chats/${chatId}`, {
+    const response = await fetch(`${BACKEND_URL}/api/chats/${chatId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -579,7 +580,7 @@ const MentalHealthChatbot = () => {
           setLastInputType("video");
           setIsBotTyping(true);
           const res = await axios.post(
-            "http://127.0.0.1:5001/unified_emotion",
+            `${PYTHON_API_URL}/unified_emotion`,
             formData,
             {
               headers: { "Content-Type": "multipart/form-data" },
@@ -783,7 +784,7 @@ const MentalHealthChatbot = () => {
           setLastInputType("voice");
           setIsBotTyping(true);
           const res = await axios.post(
-            "http://127.0.0.1:5001/unified_emotion",
+            `${PYTHON_API_URL}/unified_emotion`,
             formData,
             {
               headers: { "Content-Type": "multipart/form-data" },

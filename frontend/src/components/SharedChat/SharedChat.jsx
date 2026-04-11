@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Camera, Mic } from "lucide-react";
 import "../Chatbot/Chatbot.css";
+import { BACKEND_URL } from "../../api.config";
 
 const SharedChat = () => {
   const { shareId } = useParams();
@@ -13,7 +14,7 @@ const SharedChat = () => {
   useEffect(() => {
     const loadSharedChat = async () => {
       try {
-        const sharedRes = await fetch(`/api/chats/shared/${shareId}/history`);
+        const sharedRes = await fetch(`${BACKEND_URL}/api/chats/shared/${shareId}/history`);
         if (!sharedRes.ok) {
           throw new Error("Shared chat not found or expired");
         }
