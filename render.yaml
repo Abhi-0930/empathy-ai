@@ -1,0 +1,24 @@
+# Render Blueprint for Empathy AI
+# This file automatically configures sub-directory builds for Render.
+
+services:
+  # 1. Python AI API
+  - type: web
+    name: empathy-api
+    env: python
+    rootDir: api
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
+      - key: TRANSCRIPTION_MODEL
+        value: base
+
+  # 2. Node.js Backend
+  - type: web
+    name: empathy-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node index.js
