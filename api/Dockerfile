@@ -5,7 +5,6 @@ FROM python:3.10-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_APP=app.py
-ENV PORT=7860
 
 # Install system dependencies for OpenCV, DeepFace, and Librosa
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -32,9 +31,6 @@ COPY . .
 # Create the uploads directory and set permissions
 RUN mkdir -p uploads && chmod 777 uploads
 
-# Expose the port (Hugging Face uses 7860)
-EXPOSE 7860
-
-# Command to run the application
-# We use 0.0.0.0 to allow external connections
-CMD ["flask", "run", "--host=0.0.0.0", "--port=7860"]
+# Command to run the application using the dynamic PORT provided by Render
+# Defaults to 10000 if PORT is not set
+CMD flask run --host=0.0.0.0 --port=${PORT:-10000}
