@@ -10,7 +10,7 @@ ENV PORT=7860
 # Install system dependencies for OpenCV, DeepFace, and Librosa
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
