@@ -10,7 +10,7 @@ from face_emotion import analyze_facial_emotion
 from voice_emotion import analyze_voice_emotion
 
 from langchain_openai.chat_models.base import ChatOpenAI
-from langchain.schema import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage
 from dotenv import load_dotenv, dotenv_values
 
 from langchain.memory import ConversationBufferMemory
