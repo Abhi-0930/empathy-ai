@@ -13,8 +13,6 @@ from langchain_openai.chat_models.base import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from dotenv import load_dotenv, dotenv_values
 
-from langchain.memory import ConversationBufferMemory
-
 from pymongo import MongoClient
 from cryptography.fernet import Fernet, InvalidToken
 from bson import ObjectId
@@ -161,9 +159,6 @@ def _decrypt_text(value: str):
     except (InvalidToken, Exception):
         # Backwards compat: plaintext rows or wrong key.
         return value
-
-# Create memory for storing chat history (not currently used directly)
-memory = ConversationBufferMemory()
 
 def determine_dominant_emotion(text_sentiment, voice_emotion, face_emotion):
     """
