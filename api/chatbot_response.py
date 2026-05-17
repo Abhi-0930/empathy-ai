@@ -270,11 +270,15 @@ def _summarize_text_block(title: str, turns):
             "Return only the summary text."
         )
     )
-    resp = llm.invoke([sys, human])
-    summary = (resp.content or "").strip()
-    if len(summary) > SUMMARY_MAX_CHARS:
-        summary = summary[:SUMMARY_MAX_CHARS].rstrip()
-    return summary
+    try:
+        resp = llm.invoke([sys, human])
+        summary = (resp.content or "").strip()
+        if len(summary) > SUMMARY_MAX_CHARS:
+            summary = summary[:SUMMARY_MAX_CHARS].rstrip()
+        return summary
+    except Exception as e:
+        print(f"[api] Warning: LLM summarization failed ({e}).")
+        return None
 
 
 def get_or_update_session_summary(user_id: str, session_id: str, chat_history):
@@ -299,6 +303,9 @@ def get_or_update_session_summary(user_id: str, session_id: str, chat_history):
     # Summarize all but the last MAX_RAW_TURNS_IN_PROMPT turns
     older = chat_history[:-MAX_RAW_TURNS_IN_PROMPT] if len(chat_history) > MAX_RAW_TURNS_IN_PROMPT else []
     summary = _summarize_text_block("Session summary", older)
+    if summary is None:
+        return (existing or {}).get("summary", "") or ""
+
     if len(summary) > SUMMARY_MAX_CHARS:
         summary = summary[:SUMMARY_MAX_CHARS].rstrip()
 
@@ -326,6 +333,9 @@ def get_or_update_user_memory(user_id: str):
 
     turns = _get_recent_turns_across_sessions(user_id, USER_MEMORY_MAX_TURNS)
     summary = _summarize_text_block("User long-term memory (across sessions)", turns)
+    if summary is None:
+        return (existing or {}).get("summary", "") or ""
+
     if len(summary) > SUMMARY_MAX_CHARS:
         summary = summary[:SUMMARY_MAX_CHARS].rstrip()
 
@@ -660,7 +670,17 @@ def _generate_conversational_response(user_id, session_id, user_text, formatted_
 
     user_message = HumanMessage(content=user_text)
     messages = formatted_history + [system_message, user_message]
-    ai_response = llm.invoke(messages)
+    
+    try:
+        ai_response = llm.invoke(messages)
+        response_content = ai_response.content
+    except Exception as e:
+        print(f"[api] Error in conversational response LLM invoke: {e}")
+        response_content = (
+            "I'm here for you, though my AI service is currently experiencing API quota limits or temporary issues. "
+            "Please take a deep breath and know that your feelings are completely valid and you are not alone. "
+            "You can also explore the guided exercises in the panel, such as Box Breathing (breathing-box-1), to help ground yourself."
+        )
 
     # For text-only conversations, still compute a text sentiment label
     # so that mood trends can track these entries as well.
@@ -673,11 +693,11 @@ def _generate_conversational_response(user_id, session_id, user_text, formatted_
         user_id,
         session_id,
         user_text,
-        ai_response.content,
+        response_content,
         voice_emotion=None,
         dominant_emotion=text_sentiment,
     )
-    return ai_response.content
+    return response_content
 
 
 def generate_chatbot_response(user_id, session_id, user_text, face_emotion, voice_emotion, voice_text):
@@ -815,17 +835,36 @@ def generate_chatbot_response(user_id, session_id, user_text, face_emotion, voic
     
     messages = formatted_history + [system_message, user_message]
 
-    ai_response = llm.invoke(messages)
+    try:
+        ai_response = llm.invoke(messages)
+        response_content = ai_response.content
+    except Exception as e:
+        print(f"[api] Error in structured response LLM invoke: {e}")
+        response_content = (
+            "### Emotional reflection\n"
+            "- I hear what you are saying, and I appreciate you sharing your feelings with me.\n"
+            f"- It sounds like you are experiencing **{dominant_emotion}** right now.\n\n"
+            "### What this might feel like\n"
+            "- It is completely valid to feel this way, especially when things feel overwhelming or uncertain.\n"
+            "- Acknowledging your emotions is a wonderful first step toward taking care of yourself.\n\n"
+            "### Therapy suggestions\n"
+            "- Try the guided exercise `breathing-box-1` – **Box Breathing (4x4)** in the exercises panel to help calm your nervous system.\n"
+            "- Take a moment to pause, step away from any immediate stressors, and practice self-compassion.\n"
+            "- Consider writing down your thoughts or journaling to help process what is on your mind.\n\n"
+            "### Gentle reminder\n"
+            "- Please remember that you are not alone, and taking things one small step at a time is enough.\n"
+            "- *(Note: The AI service is currently experiencing API quota limits, showing fallback support)*"
+        )
 
     # Store the chat history in MongoDB Atlas under users_chat collection
     store_chat_in_db(
         user_id,
         session_id,
         user_text,
-        ai_response.content,
+        response_content,
         voice_emotion,
         dominant_emotion,
     )
-    return ai_response.content
+    return response_content
 
 
